@@ -37,7 +37,7 @@ A vector drawing application inspired by Excalidraw, built with SvelteKit, TypeS
 
 ```bash
 # Clone the repository
-git clone <your-repo-url>
+git clone https://github.com/hydropix/Vectoprez.git
 cd Vectoprez
 
 # Install dependencies
