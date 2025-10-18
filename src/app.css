@@ -1,0 +1,30 @@
+:root {
+	/* Default light theme */
+	--color-background: #ffffff;
+	--color-surface: #f8f9fa;
+	--color-border: #dee2e6;
+	--color-text: #212529;
+	--color-text-secondary: #6c757d;
+	--color-canvas-background: #ffffff;
+	--color-button-hover: #e9ecef;
+	--color-button-active: #dee2e6;
+	--color-input-background: #ffffff;
+	--color-input-border: #ced4da;
+}
+
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+html,
+body {
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell,
+		sans-serif;
+	background-color: var(--color-background);
+	color: var(--color-text);
+}

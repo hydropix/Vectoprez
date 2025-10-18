@@ -1,0 +1,47 @@
+# Dependencies
+node_modules
+/.pnp
+.pnp.js
+
+# SvelteKit
+.svelte-kit
+/build
+/package
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# IDE and Editor
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.swp
+*.swo
+*~
+
+# Claude Code
+.claude
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Testing
+coverage
+.nyc_output
+
+# Temporary files
+*.timestamp-*
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# OS
+Thumbs.db
+
+# Tauri
+src-tauri/target
+src-tauri/Cargo.lock
