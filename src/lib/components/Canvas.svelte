@@ -273,7 +273,7 @@
           }));
         }
       }
-    } else if (['rectangle', 'ellipse', 'diamond'].includes($appState.activeTool)) {
+    } else if (['rectangle', 'ellipse'].includes($appState.activeTool)) {
       // Commencer à dessiner une forme
       isDrawing = true;
       drawStart = worldPos;

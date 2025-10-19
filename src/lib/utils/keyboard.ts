@@ -17,8 +17,6 @@ function handleKeyDown(e: KeyboardEvent) {
     setTool('rectangle');
   } else if (e.key === 'o' || e.key === 'e') {
     setTool('ellipse');
-  } else if (e.key === 'd') {
-    setTool('diamond');
   } else if (e.key === 'a') {
     setTool('arrow');
   } else if (e.key === 'h' || e.key === ' ') {

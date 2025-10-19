@@ -5,7 +5,7 @@ import type { ExcalidrawFile } from './export';
  * Validate if a value is a valid ToolType
  */
 function isValidToolType(value: unknown): value is ToolType {
-  const validTools: ToolType[] = ['selection', 'rectangle', 'ellipse', 'diamond', 'arrow', 'line', 'draw', 'text', 'eraser', 'hand'];
+  const validTools: ToolType[] = ['selection', 'rectangle', 'ellipse', 'arrow', 'line', 'draw', 'text', 'eraser', 'hand'];
   return typeof value === 'string' && validTools.includes(value as ToolType);
 }
 
@@ -71,7 +71,7 @@ function isValidElement(obj: unknown): boolean {
   if (!isValidBaseElement(obj)) return false;
 
   const el = obj as any;
-  const validTypes = ['rectangle', 'ellipse', 'diamond', 'line', 'arrow', 'text'];
+  const validTypes = ['rectangle', 'ellipse', 'line', 'arrow', 'text'];
 
   if (!validTypes.includes(el.type)) return false;
 

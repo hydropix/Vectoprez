@@ -104,16 +104,6 @@ function elementToSVG(element: AnyExcalidrawElement): string {
       return `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" ${baseStyle}/>`;
     }
 
-    case 'diamond': {
-      const points = [
-        `${x + width / 2},${y}`,
-        `${x + width},${y + height / 2}`,
-        `${x + width / 2},${y + height}`,
-        `${x},${y + height / 2}`,
-      ].join(' ');
-      return `<polygon points="${points}" ${baseStyle}/>`;
-    }
-
     case 'arrow': {
       const arrow = element as ArrowElement;
       if (arrow.points && arrow.points.length >= 2) {

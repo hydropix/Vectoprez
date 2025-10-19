@@ -13,9 +13,9 @@ const initialState: AppState = {
   currentStrokeColor: initialTheme === 'light' ? '#000000' : '#ffffff',
   currentBackgroundColor: 'transparent',
   currentFillStyle: 'hachure',
-  currentStrokeWidth: 1,
+  currentStrokeWidth: 2,  // Trait légèrement plus épais pour un style moderne
   currentStrokeStyle: 'solid',
-  currentRoughness: 1,
+  currentRoughness: 0,  // Style plus lisse et épuré (architect mode)
   currentOpacity: 100,
   selectedElementIds: new Set(),
   viewBackgroundColor: initialTheme === 'light' ? '#ffffff' : '#1a1a1a',

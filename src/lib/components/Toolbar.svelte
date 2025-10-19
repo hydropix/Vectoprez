@@ -124,12 +124,6 @@
       on:click={() => setTool('ellipse')}
     />
     <IconButton
-      icon="diamond"
-      title="Diamond (D)"
-      active={$appState.activeTool === 'diamond'}
-      on:click={() => setTool('diamond')}
-    />
-    <IconButton
       icon="arrow"
       title="Arrow (A)"
       active={$appState.activeTool === 'arrow'}

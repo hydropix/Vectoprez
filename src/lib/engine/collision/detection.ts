@@ -72,7 +72,6 @@ export function hitTest(
 
   switch (type) {
     case 'rectangle':
-    case 'diamond':
     case 'text':
       return (
         point.x >= x &&

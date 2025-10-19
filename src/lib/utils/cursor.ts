@@ -77,7 +77,6 @@ export function getCursor(params: {
 
     case 'rectangle':
     case 'ellipse':
-    case 'diamond':
     case 'arrow':
       return 'crosshair';
 

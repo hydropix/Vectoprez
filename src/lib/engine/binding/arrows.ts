@@ -86,7 +86,7 @@ export function getBindingPoint(
     px = centerX + rx * Math.cos(angle);
     py = centerY + ry * Math.sin(angle);
   } else {
-    // Rectangle/diamond: approximation
+    // Rectangle: approximation
     const rx = width / 2;
     const ry = height / 2;
     px = centerX + rx * Math.cos(angle);

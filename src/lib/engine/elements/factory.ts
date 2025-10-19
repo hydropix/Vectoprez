@@ -19,9 +19,9 @@ export function createElement(
     strokeColor: options.strokeColor ?? '#000000',
     backgroundColor: options.backgroundColor ?? 'transparent',
     fillStyle: options.fillStyle ?? 'hachure',
-    strokeWidth: options.strokeWidth ?? 1,
+    strokeWidth: options.strokeWidth ?? 2,
     strokeStyle: options.strokeStyle ?? 'solid',
-    roughness: options.roughness ?? 1,
+    roughness: options.roughness ?? 0,  // Style lisse par défaut
     opacity: options.opacity ?? 100,
     locked: options.locked ?? false,
     seed: Math.floor(Math.random() * 2 ** 31),

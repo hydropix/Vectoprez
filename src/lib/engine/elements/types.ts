@@ -2,7 +2,6 @@ export type ToolType =
   | 'selection'
   | 'rectangle'
   | 'ellipse'
-  | 'diamond'
   | 'arrow'
   | 'line'
   | 'draw'
@@ -52,7 +51,7 @@ export interface BaseElement {
 }
 
 export interface ExcalidrawElement extends BaseElement {
-  type: 'rectangle' | 'ellipse' | 'diamond' | 'line';
+  type: 'rectangle' | 'ellipse' | 'line';
   boundElements: { id: string; type: 'arrow' | 'text' }[];
 }
 

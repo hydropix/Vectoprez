@@ -1,10 +1,69 @@
-import rough from 'roughjs';
-import type { RoughCanvas } from 'roughjs/bin/canvas';
 import type { AnyExcalidrawElement, ArrowElement, TextElement, Theme } from '../elements/types';
 import type { ViewportTransform } from './coordinates';
 import { getThemedColor } from '$lib/utils/colorInversion';
 
-let rc: RoughCanvas | null = null;
+// Rendu lisse avec canvas natif pour un style moderne
+function renderSmoothShape(
+  element: AnyExcalidrawElement,
+  ctx: CanvasRenderingContext2D,
+  strokeColor: string,
+  bgColor: string | undefined
+) {
+  ctx.save();
+
+  ctx.globalAlpha = element.opacity / 100;
+  ctx.strokeStyle = strokeColor;
+  ctx.lineWidth = element.strokeWidth;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  ctx.beginPath();
+
+  switch (element.type) {
+    case 'rectangle': {
+      // Rectangle avec coins arrondis
+      const radius = Math.min(element.width, element.height) * 0.12;
+      const x = element.x;
+      const y = element.y;
+      const w = element.width;
+      const h = element.height;
+      const r = Math.min(radius, w / 2, h / 2);
+
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.arcTo(x + w, y, x + w, y + r, r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+      ctx.lineTo(x + r, y + h);
+      ctx.arcTo(x, y + h, x, y + h - r, r);
+      ctx.lineTo(x, y + r);
+      ctx.arcTo(x, y, x + r, y, r);
+      ctx.closePath();
+      break;
+    }
+    case 'ellipse': {
+      // Ellipse lisse
+      const centerX = element.x + element.width / 2;
+      const centerY = element.y + element.height / 2;
+      const radiusX = element.width / 2;
+      const radiusY = element.height / 2;
+
+      ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, 2 * Math.PI);
+      break;
+    }
+  }
+
+  // Remplissage
+  if (bgColor) {
+    ctx.fillStyle = bgColor;
+    ctx.fill();
+  }
+
+  // Contour
+  ctx.stroke();
+
+  ctx.restore();
+}
 
 export function renderElements(
   ctx: CanvasRenderingContext2D,
@@ -12,10 +71,6 @@ export function renderElements(
   transform: ViewportTransform,
   options?: { excludeIds?: Set<string>; theme?: Theme }
 ) {
-  if (!rc) {
-    rc = rough.canvas(ctx.canvas);
-  }
-
   ctx.save();
   ctx.translate(transform.scrollX, transform.scrollY);
   ctx.scale(transform.zoom, transform.zoom);
@@ -24,14 +79,13 @@ export function renderElements(
     // Skip elements being edited
     if (options?.excludeIds?.has(element.id)) continue;
 
-    renderElement(rc, element, ctx, options?.theme || 'light');
+    renderElement(element, ctx, options?.theme || 'light');
   }
 
   ctx.restore();
 }
 
 function renderElement(
-  rc: RoughCanvas,
   element: AnyExcalidrawElement,
   ctx: CanvasRenderingContext2D,
   theme: Theme
@@ -42,41 +96,14 @@ function renderElement(
     ? undefined
     : getThemedColor(element.backgroundColor, theme);
 
-  const options = {
-    stroke: themedStrokeColor,
-    strokeWidth: element.strokeWidth,
-    fill: themedBgColor,
-    fillStyle: element.fillStyle,
-    roughness: element.roughness,
-    seed: element.seed,
-  };
-
+  // Utiliser le rendu lisse pour toutes les formes (style moderne)
   switch (element.type) {
     case 'rectangle':
-      rc.rectangle(element.x, element.y, element.width, element.height, options);
-      break;
     case 'ellipse':
-      rc.ellipse(
-        element.x + element.width / 2,
-        element.y + element.height / 2,
-        element.width,
-        element.height,
-        options
-      );
-      break;
-    case 'diamond':
-      rc.polygon(
-        [
-          [element.x + element.width / 2, element.y],
-          [element.x + element.width, element.y + element.height / 2],
-          [element.x + element.width / 2, element.y + element.height],
-          [element.x, element.y + element.height / 2],
-        ],
-        options
-      );
+      renderSmoothShape(element, ctx, themedStrokeColor, themedBgColor);
       break;
     case 'arrow':
-      renderArrow(rc, element as ArrowElement, ctx, theme);
+      renderArrow(element as ArrowElement, ctx, theme);
       break;
     case 'text':
       renderText(element as TextElement, ctx, theme);
@@ -85,7 +112,6 @@ function renderElement(
 }
 
 function renderArrow(
-  rc: RoughCanvas,
   arrow: ArrowElement,
   ctx: CanvasRenderingContext2D,
   theme: Theme
@@ -93,36 +119,44 @@ function renderArrow(
   const { x, y, points, strokeWidth } = arrow;
   const themedStrokeColor = getThemedColor(arrow.strokeColor, theme);
 
+  // Utiliser le canvas natif pour un rendu lisse et moderne
+  ctx.save();
+  ctx.globalAlpha = arrow.opacity / 100;
+  ctx.strokeStyle = themedStrokeColor;
+  ctx.lineWidth = strokeWidth;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
   // Dessiner la ligne ou la courbe
+  ctx.beginPath();
   if (points.length === 2) {
     // Ligne droite
-    rc.line(
-      x + points[0].x,
-      y + points[0].y,
-      x + points[1].x,
-      y + points[1].y,
-      {
-        stroke: themedStrokeColor,
-        strokeWidth,
-      }
-    );
+    ctx.moveTo(x + points[0].x, y + points[0].y);
+    ctx.lineTo(x + points[1].x, y + points[1].y);
   } else if (points.length === 3) {
     // Courbe de Bézier quadratique
     const start = points[0];
     const control = points[1];
     const end = points[2];
 
-    const path = `M ${x + start.x} ${y + start.y} Q ${x + control.x} ${y + control.y} ${x + end.x} ${y + end.y}`;
-    rc.path(path, { stroke: themedStrokeColor, strokeWidth });
+    ctx.moveTo(x + start.x, y + start.y);
+    ctx.quadraticCurveTo(
+      x + control.x,
+      y + control.y,
+      x + end.x,
+      y + end.y
+    );
   } else {
     // Multi-points (path linéaire)
-    const path = points.map((p, i) =>
-      `${i === 0 ? 'M' : 'L'} ${x + p.x} ${y + p.y}`
-    ).join(' ');
-    rc.path(path, { stroke: themedStrokeColor, strokeWidth });
+    ctx.moveTo(x + points[0].x, y + points[0].y);
+    for (let i = 1; i < points.length; i++) {
+      ctx.lineTo(x + points[i].x, y + points[i].y);
+    }
   }
+  ctx.stroke();
+  ctx.restore();
 
-  // Dessiner arrowhead à la fin
+  // Dessiner arrowhead à la fin avec un design moderne et minimaliste
   if (arrow.endArrowhead === 'arrow') {
     const lastPoint = points[points.length - 1];
     let secondLastPoint: typeof lastPoint;
@@ -131,8 +165,6 @@ function renderArrow(
       // Pour les courbes, calculer la tangente au point final
       const control = points[1];
       const end = points[2];
-      // Tangente à t=1 pour une courbe de Bézier quadratique: 2(1-t)(P1-P0) + 2t(P2-P1)
-      // À t=1: 2(P2-P1)
       const tangentX = end.x - control.x;
       const tangentY = end.y - control.y;
       const length = Math.sqrt(tangentX * tangentX + tangentY * tangentY);
@@ -151,27 +183,33 @@ function renderArrow(
       lastPoint.x - secondLastPoint.x
     );
 
-    const arrowSize = 15;
-    const arrowAngle = Math.PI / 6;
+    // Design moderne: flèche simple et épurée
+    const arrowLength = Math.max(strokeWidth * 3, 10);
+    const arrowWidth = Math.PI / 6; // Angle de 30 degrés pour un look épuré
 
     ctx.save();
-    ctx.fillStyle = themedStrokeColor;
+    ctx.strokeStyle = themedStrokeColor;
+    ctx.lineWidth = strokeWidth;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.globalAlpha = arrow.opacity / 100;
+
+    // Dessiner les deux lignes de la pointe (style ouvert, non rempli)
     ctx.beginPath();
-    ctx.moveTo(x + lastPoint.x, y + lastPoint.y);
-    ctx.lineTo(
-      x + lastPoint.x - arrowSize * Math.cos(angle - arrowAngle),
-      y + lastPoint.y - arrowSize * Math.sin(angle - arrowAngle)
+    ctx.moveTo(
+      x + lastPoint.x - arrowLength * Math.cos(angle - arrowWidth),
+      y + lastPoint.y - arrowLength * Math.sin(angle - arrowWidth)
     );
+    ctx.lineTo(x + lastPoint.x, y + lastPoint.y);
     ctx.lineTo(
-      x + lastPoint.x - arrowSize * Math.cos(angle + arrowAngle),
-      y + lastPoint.y - arrowSize * Math.sin(angle + arrowAngle)
+      x + lastPoint.x - arrowLength * Math.cos(angle + arrowWidth),
+      y + lastPoint.y - arrowLength * Math.sin(angle + arrowWidth)
     );
-    ctx.closePath();
-    ctx.fill();
+    ctx.stroke();
     ctx.restore();
   }
 
-  // Dessiner arrowhead au début si nécessaire
+  // Dessiner arrowhead au début si nécessaire avec un design moderne et minimaliste
   if (arrow.startArrowhead === 'arrow') {
     const firstPoint = points[0];
     let secondPoint: typeof firstPoint;
@@ -180,7 +218,6 @@ function renderArrow(
       // Pour les courbes, calculer la tangente au point initial
       const start = points[0];
       const control = points[1];
-      // Tangente à t=0: 2(P1-P0)
       const tangentX = control.x - start.x;
       const tangentY = control.y - start.y;
       const length = Math.sqrt(tangentX * tangentX + tangentY * tangentY);
@@ -199,23 +236,29 @@ function renderArrow(
       secondPoint.x - firstPoint.x
     );
 
-    const arrowSize = 15;
-    const arrowAngle = Math.PI / 6;
+    // Design moderne: flèche simple et épurée
+    const arrowLength = Math.max(strokeWidth * 3, 10);
+    const arrowWidth = Math.PI / 6; // Angle de 30 degrés pour un look épuré
 
     ctx.save();
-    ctx.fillStyle = themedStrokeColor;
+    ctx.strokeStyle = themedStrokeColor;
+    ctx.lineWidth = strokeWidth;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.globalAlpha = arrow.opacity / 100;
+
+    // Dessiner les deux lignes de la pointe (style ouvert, non rempli)
     ctx.beginPath();
-    ctx.moveTo(x + firstPoint.x, y + firstPoint.y);
-    ctx.lineTo(
-      x + firstPoint.x + arrowSize * Math.cos(angle - arrowAngle),
-      y + firstPoint.y + arrowSize * Math.sin(angle - arrowAngle)
+    ctx.moveTo(
+      x + firstPoint.x + arrowLength * Math.cos(angle - arrowWidth),
+      y + firstPoint.y + arrowLength * Math.sin(angle - arrowWidth)
     );
+    ctx.lineTo(x + firstPoint.x, y + firstPoint.y);
     ctx.lineTo(
-      x + firstPoint.x + arrowSize * Math.cos(angle + arrowAngle),
-      y + firstPoint.y + arrowSize * Math.sin(angle + arrowAngle)
+      x + firstPoint.x + arrowLength * Math.cos(angle + arrowWidth),
+      y + firstPoint.y + arrowLength * Math.sin(angle + arrowWidth)
     );
-    ctx.closePath();
-    ctx.fill();
+    ctx.stroke();
     ctx.restore();
   }
 }
