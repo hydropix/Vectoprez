@@ -25,11 +25,23 @@
     renderArrowHandles,
     type ArrowHandle,
   } from '../engine/arrows/handles';
+  import {
+    getLineHandleAtPosition,
+    renderLineHandles,
+    type LineHandle,
+  } from '../engine/lines/handles';
   import { addControlPoint, removeControlPoint } from '../engine/arrows/curves';
   import { updateArrowBoundingBox } from '../engine/arrows/boundingBox';
-  import { getCanonicalColor } from '$lib/utils/colorInversion';
+  import { getColorFromIndex } from '$lib/utils/colorPalette';
   import { getCursor, type CursorType } from '$lib/utils/cursor';
   import type { Point, ArrowElement, TextElement, AnyExcalidrawElement, ExcalidrawElement } from '../engine/elements/types';
+  import {
+    getHandleAtPosition as getTransformHandleAtPosition,
+    renderTransformHandles,
+    getCursorForHandle,
+    type TransformHandle,
+  } from '../engine/transform/handles';
+  import { calculateResize, calculateRotation, snapRotation } from '../engine/transform/geometry';
 
   let canvasEl: HTMLCanvasElement;
   let ctx: CanvasRenderingContext2D | null = null;
@@ -37,6 +49,7 @@
   let isDrawing = false;
   let isDragging = false;
   let isDraggingHandle = false;
+  let isDraggingTransformHandle = false;
   let lastMousePos = { x: 0, y: 0 };
   let drawStart: Point | null = null;
   let currentElementId: string | null = null;
@@ -44,6 +57,11 @@
   let dragOffset: Point = { x: 0, y: 0 };
   let draggedHandle: ArrowHandle | null = null;
   let draggedArrow: ArrowElement | null = null;
+  let draggedLineHandle: LineHandle | null = null;
+  let draggedLine: ExcalidrawElement | null = null;
+  let draggedTransformHandle: TransformHandle | null = null;
+  let transformStartPoint: Point | null = null;
+  let transformOriginalElement: (ExcalidrawElement | TextElement) | null = null;
   let lastClickTime = 0;
   let lastClickPos: Point | null = null;
   let isEditingText = false;
@@ -52,24 +70,53 @@
   let currentCursor: CursorType = 'default';
   let isOverElement = false;
   let isOverHandle = false;
+  let isOverTransformHandle = false;
+  let hoverTransformHandleType: TransformHandle | null = null;
 
   // Reactive statement to update canvas background when theme changes
   $: if ($appState.theme) {
-    const bgColor = $appState.theme === 'light' ? '#ffffff' : '#1a1a1a';
+    const bgColor = $appState.theme === 'light' ? '#ff9f93' : '#171923';
     appState.update(s => ({ ...s, viewBackgroundColor: bgColor }));
   }
 
   // Reactive statement to update cursor based on current state
-  $: currentCursor = getCursor({
-    activeTool: $appState.activeTool,
-    isPanning,
-    isDragging,
-    isDraggingHandle,
-    isDrawing,
-    isEditingText,
-    isOverElement,
-    isOverHandle,
-  });
+  $: {
+    if (isDraggingTransformHandle && draggedTransformHandle && transformOriginalElement) {
+      currentCursor = draggedTransformHandle.type === 'rotate'
+        ? 'grabbing'
+        : getCursorForHandle(draggedTransformHandle.type, transformOriginalElement.angle) as CursorType;
+    } else if (isOverTransformHandle && hoverTransformHandleType) {
+      const selectedIds = Array.from($appState.selectedElementIds);
+      const selectedElement = $elements.find(el => el.id === selectedIds[0]);
+      if (selectedElement && selectedElement.type !== 'arrow') {
+        currentCursor = hoverTransformHandleType.type === 'rotate'
+          ? 'grab'
+          : getCursorForHandle(hoverTransformHandleType.type, selectedElement.angle) as CursorType;
+      } else {
+        currentCursor = getCursor({
+          activeTool: $appState.activeTool,
+          isPanning,
+          isDragging,
+          isDraggingHandle,
+          isDrawing,
+          isEditingText,
+          isOverElement,
+          isOverHandle,
+        });
+      }
+    } else {
+      currentCursor = getCursor({
+        activeTool: $appState.activeTool,
+        isPanning,
+        isDragging,
+        isDraggingHandle,
+        isDrawing,
+        isEditingText,
+        isOverElement,
+        isOverHandle,
+      });
+    }
+  }
 
   onMount(() => {
     ctx = canvasEl.getContext('2d');
@@ -109,6 +156,9 @@
       theme: $appState.theme,
     });
 
+    // Render hover feedback avant la sélection
+    renderHoverFeedback(ctx);
+
     // Render selection handles si sélection active
     renderSelection(ctx);
 
@@ -117,26 +167,30 @@
 
   function renderGrid(ctx: CanvasRenderingContext2D, state: typeof $appState) {
     const gridSize = state.gridSize!;
-    ctx.strokeStyle = state.theme === 'light' ? '#e0e0e0' : '#404040';
-    ctx.lineWidth = 1;
+    // Subtle grid with dots instead of lines for modern look
+    const dotSize = 1.5;
+    ctx.fillStyle = state.theme === 'light'
+      ? 'rgba(0, 0, 0, 0.08)'
+      : 'rgba(255, 255, 255, 0.08)';
 
     const startX = Math.floor((-state.scrollX / state.zoom) / gridSize) * gridSize;
     const startY = Math.floor((-state.scrollY / state.zoom) / gridSize) * gridSize;
     const endX = startX + (canvasEl.width / state.zoom);
     const endY = startY + (canvasEl.height / state.zoom);
 
+    // Draw dots at grid intersections
     for (let x = startX; x < endX; x += gridSize) {
-      ctx.beginPath();
-      ctx.moveTo(x * state.zoom + state.scrollX, 0);
-      ctx.lineTo(x * state.zoom + state.scrollX, canvasEl.height);
-      ctx.stroke();
-    }
-
-    for (let y = startY; y < endY; y += gridSize) {
-      ctx.beginPath();
-      ctx.moveTo(0, y * state.zoom + state.scrollY);
-      ctx.lineTo(canvasEl.width, y * state.zoom + state.scrollY);
-      ctx.stroke();
+      for (let y = startY; y < endY; y += gridSize) {
+        ctx.beginPath();
+        ctx.arc(
+          x * state.zoom + state.scrollX,
+          y * state.zoom + state.scrollY,
+          dotSize,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+      }
     }
   }
 
@@ -149,22 +203,98 @@
     ctx.scale($appState.zoom, $appState.zoom);
 
     const selectedElements = $elements.filter(el => selectedIds.includes(el.id));
-    for (const el of selectedElements) {
-      if (el.type === 'arrow') {
-        // Pour les flèches, afficher les handles seulement si on n'est pas en train de dessiner
-        // Cela évite le conflit entre création et édition
-        if (!isDrawing) {
-          renderArrowHandles(ctx, el as ArrowElement, $appState.zoom);
+
+    // Only show transform handles if a single non-arrow, non-line element is selected
+    if (selectedElements.length === 1 && selectedElements[0].type !== 'arrow' && selectedElements[0].type !== 'line') {
+      const element = selectedElements[0] as ExcalidrawElement | TextElement;
+      renderTransformHandles(ctx, element, $appState.zoom);
+    } else {
+      // For arrows, lines, or multiple selections, use the old rendering
+      for (const el of selectedElements) {
+        if (el.type === 'arrow') {
+          // Pour les flèches, afficher les handles seulement si on n'est pas en train de dessiner
+          // Cela évite le conflit entre création et édition
+          if (!isDrawing) {
+            renderArrowHandles(ctx, el as ArrowElement, $appState.zoom);
+          }
+        } else if (el.type === 'line') {
+          // Pour les lignes, afficher les handles de ligne
+          if (!isDrawing) {
+            renderLineHandles(ctx, el as ExcalidrawElement, $appState.zoom);
+          }
+        } else {
+          // Pour les autres éléments, afficher le bounding box moderne
+          // Glow effect
+          ctx.shadowColor = 'rgba(59, 130, 246, 0.3)';
+          ctx.shadowBlur = 8 / $appState.zoom;
+
+          ctx.strokeStyle = '#3b82f6';
+          ctx.lineWidth = 2.5 / $appState.zoom;
+          ctx.setLineDash([8 / $appState.zoom, 4 / $appState.zoom]);
+          ctx.strokeRect(el.x, el.y, el.width, el.height);
+          ctx.setLineDash([]);
+
+          // Reset shadow
+          ctx.shadowColor = 'transparent';
+          ctx.shadowBlur = 0;
         }
-      } else {
-        // Pour les autres éléments, afficher le bounding box
-        ctx.strokeStyle = '#4dabf7';
-        ctx.lineWidth = 2 / $appState.zoom;
-        ctx.setLineDash([5 / $appState.zoom, 5 / $appState.zoom]);
-        ctx.strokeRect(el.x, el.y, el.width, el.height);
-        ctx.setLineDash([]);
       }
     }
+
+    ctx.restore();
+  }
+
+  function renderHoverFeedback(ctx: CanvasRenderingContext2D) {
+    // Ne pas afficher le feedback si pas d'élément survolé
+    if (!$appState.hoveredElementId) return;
+
+    // Ne pas afficher si l'élément est déjà sélectionné
+    if ($appState.selectedElementIds.has($appState.hoveredElementId)) return;
+
+    // Trouver l'élément survolé
+    const hoveredElement = $elements.find(el => el.id === $appState.hoveredElementId);
+    if (!hoveredElement) return;
+
+    ctx.save();
+    ctx.translate($appState.scrollX, $appState.scrollY);
+    ctx.scale($appState.zoom, $appState.zoom);
+
+    // Marge identique à celle des transform handles (10px)
+    const HANDLE_MARGIN = 10;
+    const margin = HANDLE_MARGIN / $appState.zoom;
+
+    // Style du contour gris avec effet de glow - transparent (40% d'opacité)
+    ctx.shadowColor = 'rgba(128, 128, 128, 0.25)';
+    ctx.shadowBlur = 12 / $appState.zoom;
+
+    ctx.strokeStyle = 'rgba(128, 128, 128, 0.4)'; // Gris à 40% d'opacité
+    ctx.lineWidth = 3.5 / $appState.zoom;
+    ctx.setLineDash([]); // Ligne solide
+
+    // Dessiner le contour autour de l'élément avec marge
+    if (hoveredElement.type === 'arrow') {
+      // Pour les flèches, on dessine autour du bounding box
+      const arrow = hoveredElement as ArrowElement;
+      ctx.strokeRect(
+        arrow.x - margin,
+        arrow.y - margin,
+        arrow.width + margin * 2,
+        arrow.height + margin * 2
+      );
+    } else {
+      // Pour les autres éléments, utiliser leur position et dimension
+      ctx.strokeRect(
+        hoveredElement.x - margin,
+        hoveredElement.y - margin,
+        hoveredElement.width + margin * 2,
+        hoveredElement.height + margin * 2
+      );
+    }
+
+    // Reset
+    ctx.setLineDash([]);
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
 
     ctx.restore();
   }
@@ -229,12 +359,30 @@
     }
 
     if ($appState.activeTool === 'selection') {
-      // Vérifier d'abord si on clique sur un handle de flèche sélectionnée
-      // IMPORTANT: Ne pas détecter les handles si on est en mode dessin (conflit création/édition)
       const selectedIds = Array.from($appState.selectedElementIds);
       let handleClicked = false;
 
-      if (!isDrawing) {
+      // Priority 1: Check transform handles for single non-arrow, non-line selection
+      if (!isDrawing && selectedIds.length === 1) {
+        const element = $elements.find(el => el.id === selectedIds[0]);
+        if (element && element.type !== 'arrow' && element.type !== 'line') {
+          const transformHandle = getTransformHandleAtPosition(
+            element as ExcalidrawElement | TextElement,
+            worldPos,
+            $appState.zoom
+          );
+          if (transformHandle) {
+            isDraggingTransformHandle = true;
+            draggedTransformHandle = transformHandle;
+            transformStartPoint = worldPos;
+            transformOriginalElement = structuredClone(element) as ExcalidrawElement | TextElement;
+            handleClicked = true;
+          }
+        }
+      }
+
+      // Priority 2: Check arrow handles
+      if (!handleClicked && !isDrawing) {
         for (const id of selectedIds) {
           const element = $elements.find(el => el.id === id);
           if (element && element.type === 'arrow') {
@@ -243,6 +391,23 @@
               isDraggingHandle = true;
               draggedHandle = handle;
               draggedArrow = element as ArrowElement;
+              handleClicked = true;
+              break;
+            }
+          }
+        }
+      }
+
+      // Priority 3: Check line handles
+      if (!handleClicked && !isDrawing) {
+        for (const id of selectedIds) {
+          const element = $elements.find(el => el.id === id);
+          if (element && element.type === 'line') {
+            const handle = getLineHandleAtPosition(element as ExcalidrawElement, worldPos, $appState.zoom);
+            if (handle) {
+              isDraggingHandle = true;
+              draggedLineHandle = handle;
+              draggedLine = element as ExcalidrawElement;
               handleClicked = true;
               break;
             }
@@ -273,16 +438,9 @@
           }));
         }
       }
-    } else if (['rectangle', 'ellipse'].includes($appState.activeTool)) {
-      // Commencer à dessiner une forme
+    } else if (['rectangle', 'ellipse', 'line'].includes($appState.activeTool)) {
       isDrawing = true;
       drawStart = worldPos;
-
-      // Convert display colors to canonical storage colors
-      const canonicalStrokeColor = getCanonicalColor($appState.currentStrokeColor, $appState.theme);
-      const canonicalBgColor = $appState.currentBackgroundColor === 'transparent'
-        ? 'transparent'
-        : getCanonicalColor($appState.currentBackgroundColor, $appState.theme);
 
       const newElement = createElement(
         $appState.activeTool as any,
@@ -291,8 +449,8 @@
         0,
         0,
         {
-          strokeColor: canonicalStrokeColor,
-          backgroundColor: canonicalBgColor,
+          strokeColorIndex: $appState.currentStrokeColorIndex,
+          backgroundColorIndex: $appState.currentBackgroundColorIndex,
           fillStyle: $appState.currentFillStyle,
           strokeWidth: $appState.currentStrokeWidth,
           roughness: $appState.currentRoughness,
@@ -313,11 +471,8 @@
         ? calculateBinding(worldPos, startBindingElement)
         : null;
 
-      // Convert display color to canonical storage color
-      const canonicalArrowColor = getCanonicalColor($appState.currentStrokeColor, $appState.theme);
-
       const baseArrow = createElement('arrow', worldPos.x, worldPos.y, 0, 0, {
-        strokeColor: canonicalArrowColor,
+        strokeColorIndex: $appState.currentStrokeColorIndex,
         strokeWidth: $appState.currentStrokeWidth,
       });
 
@@ -357,17 +512,13 @@
       const estimatedWidth = 100;
       const estimatedHeight = fontSize * 1.2;
 
-      // Vérifier si on clique sur un élément pour créer un binding
       const bindingElement = getBindableElementForText($elements, worldPos);
       const textBinding = bindingElement
         ? calculateTextBinding(worldPos, bindingElement, estimatedWidth, estimatedHeight)
         : null;
 
-      // Convert display color to canonical storage color
-      const canonicalTextColor = getCanonicalColor($appState.currentStrokeColor, $appState.theme);
-
       const baseText = createElement('text', worldPos.x, worldPos.y, estimatedWidth, estimatedHeight, {
-        strokeColor: canonicalTextColor,
+        strokeColorIndex: $appState.currentStrokeColorIndex,
         opacity: $appState.currentOpacity,
       }) as TextElement;
 
@@ -414,25 +565,53 @@
     );
 
     // Mettre à jour l'état de survol pour le curseur
-    if (!isPanning && !isDragging && !isDraggingHandle && !isDrawing) {
-      // Vérifier si on survole un handle
+    if (!isPanning && !isDragging && !isDraggingHandle && !isDraggingTransformHandle && !isDrawing) {
       isOverHandle = false;
+      isOverTransformHandle = false;
+      hoverTransformHandleType = null;
+
       if ($appState.activeTool === 'selection') {
         const selectedIds = Array.from($appState.selectedElementIds);
-        for (const id of selectedIds) {
-          const element = $elements.find(el => el.id === id);
-          if (element && element.type === 'arrow') {
-            const handle = getHandleAtPosition(element as ArrowElement, worldPos, $appState.zoom);
-            if (handle) {
-              isOverHandle = true;
-              break;
+
+        // Check transform handles first for single non-arrow, non-line selection
+        if (selectedIds.length === 1) {
+          const element = $elements.find(el => el.id === selectedIds[0]);
+          if (element && element.type !== 'arrow' && element.type !== 'line') {
+            const transformHandle = getTransformHandleAtPosition(
+              element as ExcalidrawElement | TextElement,
+              worldPos,
+              $appState.zoom
+            );
+            if (transformHandle) {
+              isOverTransformHandle = true;
+              hoverTransformHandleType = transformHandle;
+            }
+          }
+        }
+
+        // Check arrow handles if no transform handle is hovered
+        if (!isOverTransformHandle) {
+          for (const id of selectedIds) {
+            const element = $elements.find(el => el.id === id);
+            if (element && element.type === 'arrow') {
+              const handle = getHandleAtPosition(element as ArrowElement, worldPos, $appState.zoom);
+              if (handle) {
+                isOverHandle = true;
+                break;
+              }
+            } else if (element && element.type === 'line') {
+              const handle = getLineHandleAtPosition(element as ExcalidrawElement, worldPos, $appState.zoom);
+              if (handle) {
+                isOverHandle = true;
+                break;
+              }
             }
           }
         }
       }
 
       // Vérifier si on survole un élément
-      if (!isOverHandle) {
+      if (!isOverHandle && !isOverTransformHandle) {
         const hitElement = getElementAtPosition($elements, worldPos);
         isOverElement = hitElement !== null && $appState.activeTool === 'selection';
       }
@@ -443,6 +622,38 @@
       const dy = e.clientY - lastMousePos.y;
       pan(dx, dy);
       lastMousePos = { x: e.clientX, y: e.clientY };
+    } else if (isDraggingTransformHandle && draggedTransformHandle && transformStartPoint && transformOriginalElement) {
+      // Transform handling (resize or rotate)
+      const selectedIds = Array.from($appState.selectedElementIds);
+      if (selectedIds.length === 1) {
+        const elementId = selectedIds[0];
+
+        if (draggedTransformHandle.type === 'rotate') {
+          // Rotation
+          const newAngle = calculateRotation(transformOriginalElement, worldPos);
+          const snappedAngle = e.shiftKey ? snapRotation(newAngle, true) : newAngle;
+
+          updateElement(elementId, {
+            angle: snappedAngle,
+          } as any);
+        } else {
+          // Resize
+          const resizeResult = calculateResize(
+            transformOriginalElement,
+            draggedTransformHandle.type,
+            transformStartPoint,
+            worldPos,
+            e.shiftKey // Maintain aspect ratio with Shift
+          );
+
+          updateElement(elementId, resizeResult as any);
+
+          // Update bound elements if needed
+          let updatedElements = updateBoundElements($elements, elementId);
+          updatedElements = updateBoundTextElements(updatedElements, elementId, ctx!);
+          elements.set(updatedElements);
+        }
+      }
     } else if (isDraggingHandle && draggedHandle && draggedArrow) {
       // Déplacer le handle de la flèche
       const pointIndex = draggedHandle.pointIndex;
@@ -524,6 +735,35 @@
       const freshArrow = $elements.find(el => el.id === draggedArrow!.id);
       if (freshArrow && freshArrow.type === 'arrow') {
         draggedArrow = freshArrow as ArrowElement;
+      }
+    } else if (isDraggingHandle && draggedLineHandle && draggedLine) {
+      // Déplacer le handle de la ligne
+      if (draggedLineHandle.type === 'start') {
+        // Déplacer le point de départ
+        const dx = worldPos.x - draggedLine.x;
+        const dy = worldPos.y - draggedLine.y;
+
+        updateElement(draggedLine.id, {
+          x: worldPos.x,
+          y: worldPos.y,
+          width: draggedLine.width - dx,
+          height: draggedLine.height - dy,
+        } as any);
+      } else if (draggedLineHandle.type === 'end') {
+        // Déplacer le point de fin
+        const newWidth = worldPos.x - draggedLine.x;
+        const newHeight = worldPos.y - draggedLine.y;
+
+        updateElement(draggedLine.id, {
+          width: newWidth,
+          height: newHeight,
+        } as any);
+      }
+
+      // Mettre à jour draggedLine pour la prochaine frame
+      const freshLine = $elements.find(el => el.id === draggedLine!.id);
+      if (freshLine && freshLine.type === 'line') {
+        draggedLine = freshLine as ExcalidrawElement;
       }
     } else if (isDragging && draggedElement) {
       // Déplacer l'élément
@@ -660,7 +900,7 @@
       }
     }
 
-    if (isDrawing || isDraggingHandle || isDragging) {
+    if (isDrawing || isDraggingHandle || isDragging || isDraggingTransformHandle) {
       history.record($elements);
     }
 
@@ -668,11 +908,17 @@
     isDrawing = false;
     isDragging = false;
     isDraggingHandle = false;
+    isDraggingTransformHandle = false;
     drawStart = null;
     currentElementId = null;
     draggedElement = null;
     draggedHandle = null;
     draggedArrow = null;
+    draggedLineHandle = null;
+    draggedLine = null;
+    draggedTransformHandle = null;
+    transformStartPoint = null;
+    transformOriginalElement = null;
   }
 
   function startTextEditing(textElement: TextElement) {
@@ -787,7 +1033,7 @@
       min-height: {editingTextElement.height * $appState.zoom}px;
       font-size: {editingTextElement.fontSize * $appState.zoom}px;
       font-family: {editingTextElement.fontFamily};
-      color: {editingTextElement.strokeColor};
+      color: {getColorFromIndex(editingTextElement.strokeColorIndex, $appState.theme)};
       background: transparent;
       border: 2px solid #4dabf7;
       outline: none;
@@ -802,5 +1048,6 @@
 <style>
   canvas {
     display: block;
+    transition: background-color 0.3s ease;
   }
 </style>

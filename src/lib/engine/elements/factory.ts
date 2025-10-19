@@ -1,5 +1,6 @@
 import { v4 as uuid } from 'uuid';
 import type { ExcalidrawElement, ArrowElement, TextElement, BaseElement } from './types';
+import { COLOR_INDICES } from '$lib/utils/colorPalette';
 
 export function createElement(
   type: ExcalidrawElement['type'] | 'arrow' | 'text',
@@ -16,12 +17,12 @@ export function createElement(
     width,
     height,
     angle: 0,
-    strokeColor: options.strokeColor ?? '#000000',
-    backgroundColor: options.backgroundColor ?? 'transparent',
+    strokeColorIndex: options.strokeColorIndex ?? COLOR_INDICES.DEFAULT,
+    backgroundColorIndex: options.backgroundColorIndex ?? COLOR_INDICES.TRANSPARENT,
     fillStyle: options.fillStyle ?? 'hachure',
     strokeWidth: options.strokeWidth ?? 2,
     strokeStyle: options.strokeStyle ?? 'solid',
-    roughness: options.roughness ?? 0,  // Style lisse par défaut
+    roughness: options.roughness ?? 0,
     opacity: options.opacity ?? 100,
     locked: options.locked ?? false,
     seed: Math.floor(Math.random() * 2 ** 31),

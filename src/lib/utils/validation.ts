@@ -175,8 +175,8 @@ export function sanitizeAppState(state: Partial<AppState>): Partial<AppState> {
   if (typeof state.scrollY === 'number') sanitized.scrollY = state.scrollY;
   if (typeof state.zoom === 'number') sanitized.zoom = Math.max(0.1, Math.min(3.0, state.zoom));
   if (isValidToolType(state.activeTool)) sanitized.activeTool = state.activeTool;
-  if (typeof state.currentStrokeColor === 'string') sanitized.currentStrokeColor = state.currentStrokeColor;
-  if (typeof state.currentBackgroundColor === 'string') sanitized.currentBackgroundColor = state.currentBackgroundColor;
+  if (typeof state.currentStrokeColorIndex === 'number') sanitized.currentStrokeColorIndex = state.currentStrokeColorIndex;
+  if (typeof state.currentBackgroundColorIndex === 'number') sanitized.currentBackgroundColorIndex = state.currentBackgroundColorIndex;
   if (isValidFillStyle(state.currentFillStyle)) sanitized.currentFillStyle = state.currentFillStyle;
   if (isValidStrokeWidth(state.currentStrokeWidth)) sanitized.currentStrokeWidth = state.currentStrokeWidth;
   if (isValidRoughness(state.currentRoughness)) sanitized.currentRoughness = state.currentRoughness;

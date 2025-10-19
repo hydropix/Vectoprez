@@ -92,6 +92,14 @@ export function hitTest(
         1
       );
 
+    case 'line': {
+      // Test basé sur la distance au segment de ligne
+      const threshold = 10; // pixels de tolérance
+      const start = { x, y };
+      const end = { x: x + width, y: y + height };
+      return distanceToLineSegment(point, start, end) <= threshold;
+    }
+
     case 'arrow': {
       // Test basé sur la distance au path de la flèche
       const arrow = element as ArrowElement;

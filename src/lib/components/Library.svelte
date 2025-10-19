@@ -94,89 +94,130 @@
 <style>
 	.library-panel {
 		position: absolute;
-		right: 10px;
-		top: 10px;
-		width: 300px;
-		max-height: 80vh;
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
-		border-radius: 4px;
+		right: 24px;
+		top: 24px;
+		width: 320px;
+		max-height: 85vh;
+		background: rgba(255, 255, 255, 0.98);
+		border: 2px solid var(--color-border);
+		border-radius: var(--radius-xl);
 		display: flex;
 		flex-direction: column;
 		z-index: 20;
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+		box-shadow: var(--shadow-xl);
+		backdrop-filter: blur(12px) saturate(1.2);
+		transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	}
+
+	.library-panel:hover {
+		box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+	}
+
+	/* Dark theme adjustments */
+	[data-theme='dark'] .library-panel {
+		background: rgba(45, 55, 72, 0.98);
 	}
 
 	.library-header {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		padding: 12px;
-		border-bottom: 1px solid var(--color-border);
+		padding: var(--spacing-lg);
+		border-bottom: 2px solid var(--color-border);
 	}
 
 	.library-header h3 {
 		margin: 0;
-		font-size: 16px;
-		font-weight: 600;
+		font-size: 18px;
+		font-weight: 700;
 		color: var(--color-text);
+		letter-spacing: -0.3px;
 	}
 
 	.library-header button {
-		background: transparent;
+		background: var(--color-surface);
 		color: var(--color-text);
-		border: 1px solid var(--color-border);
-		padding: 4px 12px;
-		border-radius: 4px;
+		border: 2px solid var(--color-border);
+		padding: 6px 16px;
+		border-radius: var(--radius-full);
 		cursor: pointer;
 		font-size: 12px;
+		font-weight: 600;
+		transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+		box-shadow: var(--shadow-sm);
 	}
 
 	.library-header button:hover {
 		background: var(--color-button-hover);
+		transform: translateY(-1px);
+		box-shadow: var(--shadow-md);
 	}
 
 	.save-button {
-		margin: 12px;
-		padding: 10px;
-		background: #4dabf7;
+		margin: var(--spacing-lg);
+		padding: 12px;
+		background: var(--color-accent);
 		color: white;
 		border: none;
-		border-radius: 4px;
+		border-radius: var(--radius-lg);
 		cursor: pointer;
-		font-weight: 500;
-		transition: background 0.2s;
+		font-weight: 600;
+		font-size: 14px;
+		transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+		box-shadow: var(--shadow-sm);
+		letter-spacing: 0.2px;
 	}
 
 	.save-button:hover {
-		background: #339af0;
+		background: var(--color-accent-hover);
+		transform: translateY(-2px);
+		box-shadow: var(--shadow-md);
+	}
+
+	.save-button:active {
+		transform: translateY(0);
 	}
 
 	.library-items {
 		flex: 1;
 		overflow-y: auto;
-		padding: 12px;
+		padding: var(--spacing-md);
 	}
 
 	.library-item {
-		margin-bottom: 12px;
-		padding: 8px;
-		border: 1px solid var(--color-border);
-		border-radius: 4px;
-		background: var(--color-button-hover);
+		margin-bottom: var(--spacing-md);
+		padding: var(--spacing-md);
+		border: 2px solid var(--color-border);
+		border-radius: var(--radius-lg);
+		background: var(--color-surface);
+		transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+		box-shadow: var(--shadow-sm);
+	}
+
+	.library-item:hover {
+		transform: translateY(-2px);
+		box-shadow: var(--shadow-md);
+		border-color: var(--color-accent);
 	}
 
 	.preview-placeholder {
-		height: 80px;
+		height: 90px;
 		background: var(--color-background);
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		margin-bottom: 8px;
-		border-radius: 4px;
-		border: 1px dashed var(--color-border);
+		margin-bottom: var(--spacing-md);
+		border-radius: var(--radius-md);
+		border: 2px dashed var(--color-border);
 		color: var(--color-text-secondary);
 		font-size: 12px;
+		font-weight: 600;
+		transition: all 0.2s ease;
+	}
+
+	.library-item:hover .preview-placeholder {
+		border-color: var(--color-accent);
+		background: var(--color-button-active);
 	}
 
 	.item-info {
@@ -186,53 +227,84 @@
 	}
 
 	.item-name {
-		font-weight: 500;
+		font-weight: 600;
 		font-size: 14px;
 		color: var(--color-text);
 	}
 
 	.item-actions {
 		display: flex;
-		gap: 4px;
+		gap: var(--spacing-xs);
 	}
 
 	.item-actions button {
-		padding: 4px 8px;
+		padding: 6px 12px;
 		font-size: 12px;
 		cursor: pointer;
-		border: 1px solid var(--color-border);
-		border-radius: 3px;
-		background: var(--color-background);
-		transition: all 0.2s;
+		border: 2px solid var(--color-border);
+		border-radius: var(--radius-full);
+		background: var(--color-surface);
+		transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+		font-weight: 600;
+		box-shadow: var(--shadow-sm);
 	}
 
 	.item-actions button:hover {
-		background: var(--color-button-hover);
+		transform: translateY(-1px);
+		box-shadow: var(--shadow-md);
+	}
+
+	.item-actions button:active {
+		transform: translateY(0);
 	}
 
 	.item-actions button:first-child {
-		color: #4dabf7;
-		border-color: #4dabf7;
+		color: var(--color-accent);
+		border-color: var(--color-accent);
 	}
 
 	.item-actions button:first-child:hover {
-		background: #e7f5ff;
+		background: var(--color-button-active);
 	}
 
 	.item-actions button:last-child {
-		color: #fa5252;
-		border-color: #fa5252;
+		color: var(--color-danger);
+		border-color: var(--color-danger);
 	}
 
 	.item-actions button:last-child:hover {
-		background: #fff5f5;
+		background: var(--color-danger-bg);
 	}
 
 	.empty-state {
 		text-align: center;
 		color: var(--color-text-secondary);
-		padding: 40px 20px;
+		padding: 60px 20px;
 		font-size: 14px;
-		line-height: 1.5;
+		line-height: 1.6;
+		font-weight: 500;
+	}
+
+	/* Custom scrollbar */
+	.library-items::-webkit-scrollbar {
+		width: 10px;
+	}
+
+	.library-items::-webkit-scrollbar-track {
+		background: transparent;
+		margin: var(--spacing-md) 0;
+	}
+
+	.library-items::-webkit-scrollbar-thumb {
+		background: var(--color-border);
+		border-radius: var(--radius-full);
+		border: 2px solid transparent;
+		background-clip: padding-box;
+		transition: all 0.2s ease;
+	}
+
+	.library-items::-webkit-scrollbar-thumb:hover {
+		background: var(--color-accent);
+		background-clip: padding-box;
 	}
 </style>

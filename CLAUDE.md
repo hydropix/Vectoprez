@@ -6,6 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Vectoprez is an Excalidraw-inspired vector drawing application built with SvelteKit, TypeScript, and Rough.js. It features hand-drawn style graphics, arrow binding, text editing, undo/redo, and export capabilities. The app runs as a web application and optionally as a Tauri desktop app.
 
+## Code Comments Policy
+
+**IMPORTANT**: Code comments should be extremely rare and used only when absolutely necessary. When comments are added, they MUST be in English only. The code should be self-documenting through clear naming conventions, well-structured functions, and appropriate type definitions. Only add comments to explain complex algorithms, non-obvious business logic, or important architectural decisions that cannot be expressed through code structure alone.
+
 ## Development Commands
 
 ```bash

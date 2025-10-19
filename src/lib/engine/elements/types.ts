@@ -1,3 +1,5 @@
+import type { ColorIndex } from '$lib/utils/colorPalette';
+
 export type ToolType =
   | 'selection'
   | 'rectangle'
@@ -39,8 +41,8 @@ export interface BaseElement {
   width: number;
   height: number;
   angle: number; // radians
-  strokeColor: string;
-  backgroundColor: string;
+  strokeColorIndex: ColorIndex;
+  backgroundColorIndex: ColorIndex;
   fillStyle: FillStyle;
   strokeWidth: 1 | 2 | 4;
   strokeStyle: StrokeStyle;
@@ -86,8 +88,8 @@ export interface AppState {
   activeTool: ToolType;
 
   // Propriétés actuelles
-  currentStrokeColor: string;
-  currentBackgroundColor: string;
+  currentStrokeColorIndex: ColorIndex;
+  currentBackgroundColorIndex: ColorIndex;
   currentFillStyle: FillStyle;
   currentStrokeWidth: 1 | 2 | 4;
   currentStrokeStyle: StrokeStyle;
@@ -96,6 +98,7 @@ export interface AppState {
 
   // Sélection
   selectedElementIds: Set<string>;
+  hoveredElementId: string | null;
 
   // UI
   viewBackgroundColor: string;

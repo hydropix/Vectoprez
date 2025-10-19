@@ -30,32 +30,43 @@
 		align-items: center;
 		justify-content: center;
 		cursor: pointer;
-		background: var(--color-background);
+		background: var(--color-surface);
 		color: var(--color-text);
-		border: 1px solid var(--color-border);
-		border-radius: 4px;
-		transition: all 0.15s ease;
+		border: 2px solid var(--color-border);
+		border-radius: var(--radius-full);
+		transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 		padding: 0;
 		position: relative;
+		box-shadow: var(--shadow-sm);
+		backdrop-filter: blur(8px);
 	}
 
 	.icon-button:hover:not(:disabled) {
 		background: var(--color-button-hover);
 		border-color: var(--color-button-hover-border);
+		transform: translateY(-2px) scale(1.05);
+		box-shadow: var(--shadow-md);
 	}
 
 	.icon-button:active:not(:disabled) {
-		transform: translateY(1px);
+		transform: translateY(0) scale(0.98);
+		box-shadow: var(--shadow-sm);
+		transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
 	}
 
 	.icon-button.active {
 		background: var(--color-button-active);
 		border-color: var(--color-accent);
 		color: var(--color-accent);
+		box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1), var(--shadow-sm);
+	}
+
+	.icon-button.active:hover:not(:disabled) {
+		box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15), var(--shadow-md);
 	}
 
 	.icon-button:disabled {
-		opacity: 0.5;
+		opacity: 0.4;
 		cursor: not-allowed;
 	}
 
@@ -67,28 +78,34 @@
 	.icon-button.danger:hover:not(:disabled) {
 		background: var(--color-danger-bg);
 		border-color: var(--color-danger);
+		box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.1), var(--shadow-md);
 	}
 
 	/* Sizes */
 	.icon-button.small {
-		width: 28px;
-		height: 28px;
+		width: 32px;
+		height: 32px;
 	}
 
 	.icon-button.medium {
-		width: 36px;
-		height: 36px;
+		width: 42px;
+		height: 42px;
 	}
 
 	.icon-button.large {
-		width: 44px;
-		height: 44px;
+		width: 52px;
+		height: 52px;
 	}
 
 	/* SVG styling */
 	.icon-button :global(svg) {
 		display: block;
 		flex-shrink: 0;
+		transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+	}
+
+	.icon-button:hover:not(:disabled) :global(svg) {
+		transform: scale(1.1);
 	}
 
 	.icon-button.small :global(svg) {

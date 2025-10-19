@@ -19,12 +19,12 @@
 		}
 	}
 
-	function handleStrokeColorSelect(color: string) {
-		updateProperty('strokeColor', color);
+	function handleStrokeColorSelect(index: number) {
+		updateProperty('strokeColorIndex', index);
 	}
 
-	function handleBackgroundColorSelect(color: string) {
-		updateProperty('backgroundColor', color);
+	function handleBackgroundColorSelect(index: number) {
+		updateProperty('backgroundColorIndex', index);
 	}
 
 	function handleDuplicate() {
@@ -57,7 +57,7 @@
 		</div>
 		<div class="section">
 			<ColorPalette
-				selectedColor={selectedElements[0].strokeColor}
+				selectedColorIndex={selectedElements[0].strokeColorIndex}
 				onColorSelect={handleStrokeColorSelect}
 				layout="horizontal"
 			/>
@@ -68,7 +68,7 @@
 		</div>
 		<div class="section">
 			<ColorPalette
-				selectedColor={selectedElements[0].backgroundColor}
+				selectedColorIndex={selectedElements[0].backgroundColorIndex}
 				onColorSelect={handleBackgroundColorSelect}
 				showTransparent={true}
 				layout="horizontal"
@@ -209,37 +209,43 @@
 <style>
 	.properties-panel {
 		position: fixed;
-		left: 16px;
+		left: 24px;
 		top: 50%;
 		transform: translateY(-50%);
-		width: 240px;
+		width: 260px;
 		padding: 0;
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
-		border-radius: 8px;
+		background: rgba(255, 255, 255, 0.98);
+		border: 2px solid var(--color-border);
+		border-radius: var(--radius-xl);
 		z-index: 50;
-		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-		max-height: 80vh;
+		box-shadow: var(--shadow-xl);
+		max-height: 85vh;
 		overflow-y: auto;
+		backdrop-filter: blur(12px) saturate(1.2);
+		transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	}
+
+	.properties-panel:hover {
+		box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
 	}
 
 	.panel-header {
-		padding: 12px 16px 8px;
-		border-bottom: 1px solid var(--color-border);
+		padding: var(--spacing-lg) var(--spacing-lg) var(--spacing-md);
+		border-bottom: 2px solid var(--color-border);
 	}
 
 	.panel-header h4 {
 		margin: 0;
 		font-size: 11px;
-		font-weight: 600;
+		font-weight: 700;
 		color: var(--color-text-secondary);
 		text-transform: uppercase;
-		letter-spacing: 0.5px;
+		letter-spacing: 0.8px;
 	}
 
 	.section {
-		padding: 12px 16px;
-		border-bottom: 1px solid var(--color-border);
+		padding: var(--spacing-lg);
+		border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 	}
 
 	.section:last-child {
@@ -248,46 +254,72 @@
 
 	.button-row {
 		display: flex;
-		gap: 6px;
+		gap: var(--spacing-sm);
 		flex-wrap: wrap;
+	}
+
+	/* Dark theme adjustments */
+	[data-theme='dark'] .properties-panel {
+		background: rgba(45, 55, 72, 0.98);
+	}
+
+	[data-theme='dark'] .section {
+		border-bottom-color: rgba(255, 255, 255, 0.06);
 	}
 
 	.opacity-control {
 		display: flex;
 		flex-direction: column;
-		gap: 8px;
+		gap: var(--spacing-md);
 	}
 
 	.opacity-control input[type='range'] {
 		width: 100%;
 		cursor: pointer;
-		height: 4px;
-		border-radius: 2px;
+		height: 6px;
+		border-radius: var(--radius-full);
 		outline: none;
 		appearance: none;
 		-webkit-appearance: none;
 		background: var(--color-border);
+		transition: all 0.2s ease;
+	}
+
+	.opacity-control input[type='range']:hover {
+		height: 8px;
 	}
 
 	.opacity-control input[type='range']::-webkit-slider-thumb {
 		-webkit-appearance: none;
-		width: 16px;
-		height: 16px;
+		width: 20px;
+		height: 20px;
 		border-radius: 50%;
 		background: var(--color-accent);
 		cursor: pointer;
-		border: 2px solid var(--color-background);
-		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+		border: 3px solid var(--color-surface);
+		box-shadow: var(--shadow-md);
+		transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+	}
+
+	.opacity-control input[type='range']::-webkit-slider-thumb:hover {
+		transform: scale(1.2);
+		box-shadow: var(--shadow-lg);
 	}
 
 	.opacity-control input[type='range']::-moz-range-thumb {
-		width: 16px;
-		height: 16px;
+		width: 20px;
+		height: 20px;
 		border-radius: 50%;
 		background: var(--color-accent);
 		cursor: pointer;
-		border: 2px solid var(--color-background);
-		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+		border: 3px solid var(--color-surface);
+		box-shadow: var(--shadow-md);
+		transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+	}
+
+	.opacity-control input[type='range']::-moz-range-thumb:hover {
+		transform: scale(1.2);
+		box-shadow: var(--shadow-lg);
 	}
 
 	.opacity-values {
@@ -296,29 +328,39 @@
 		align-items: center;
 		font-size: 11px;
 		color: var(--color-text-secondary);
+		font-weight: 500;
 	}
 
 	.opacity-values .current {
-		font-weight: 600;
-		color: var(--color-text);
-		font-size: 13px;
+		font-weight: 700;
+		color: var(--color-accent);
+		font-size: 14px;
+		background: var(--color-button-active);
+		padding: 2px 8px;
+		border-radius: var(--radius-sm);
 	}
 
 	/* Custom scrollbar */
 	.properties-panel::-webkit-scrollbar {
-		width: 8px;
+		width: 10px;
 	}
 
 	.properties-panel::-webkit-scrollbar-track {
 		background: transparent;
+		margin: var(--spacing-md) 0;
 	}
 
 	.properties-panel::-webkit-scrollbar-thumb {
 		background: var(--color-border);
-		border-radius: 4px;
+		border-radius: var(--radius-full);
+		border: 2px solid transparent;
+		background-clip: padding-box;
+		transition: all 0.2s ease;
 	}
 
 	.properties-panel::-webkit-scrollbar-thumb:hover {
-		background: var(--color-text-secondary);
+		background: var(--color-accent);
+		background-clip: padding-box;
+		transform: scaleY(1.1);
 	}
 </style>

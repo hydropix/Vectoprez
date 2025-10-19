@@ -1,65 +1,81 @@
 :root {
-	/* Light theme - Inspired by modern design systems */
-	--color-background: #ffffff;
+	/* Light theme - Inspired by Mini Metro vibrant design */
+	--color-background: #ff8b7d;
 	--color-surface: #ffffff;
-	--color-border: #e5e7eb;
-	--color-text: #1f2937;
-	--color-text-secondary: #6b7280;
-	--color-canvas-background: #fafafa;
+	--color-border: rgba(0, 0, 0, 0.12);
+	--color-text: #2d3748;
+	--color-text-secondary: #718096;
+	--color-canvas-background: #ff9f93;
 
 	/* Interactive elements */
-	--color-button-hover: #f3f4f6;
-	--color-button-hover-border: #d1d5db;
-	--color-button-active: #e0e7ff;
+	--color-button-hover: rgba(255, 255, 255, 0.25);
+	--color-button-hover-border: rgba(0, 0, 0, 0.18);
+	--color-button-active: rgba(59, 130, 246, 0.15);
 
 	/* Inputs */
-	--color-input-background: #ffffff;
-	--color-input-border: #d1d5db;
+	--color-input-background: rgba(255, 255, 255, 0.95);
+	--color-input-border: rgba(0, 0, 0, 0.15);
 
 	/* Accent colors */
 	--color-accent: #3b82f6;
 	--color-accent-hover: #2563eb;
 
 	/* Danger */
-	--color-danger: #ef4444;
-	--color-danger-bg: #fef2f2;
+	--color-danger: #e53e3e;
+	--color-danger-bg: rgba(229, 62, 62, 0.1);
 
-	/* Shadows */
-	--shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-	--shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-	--shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+	/* Shadows - More pronounced for depth */
+	--shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.08);
+	--shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
+	--shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.15);
+	--shadow-xl: 0 12px 32px rgba(0, 0, 0, 0.18);
+
+	/* Border radius - More rounded for modern look */
+	--radius-sm: 8px;
+	--radius-md: 12px;
+	--radius-lg: 16px;
+	--radius-xl: 24px;
+	--radius-full: 9999px;
+
+	/* Spacing */
+	--spacing-xs: 4px;
+	--spacing-sm: 8px;
+	--spacing-md: 12px;
+	--spacing-lg: 16px;
+	--spacing-xl: 24px;
 }
 
 [data-theme='dark'] {
-	/* Dark theme - Inspired by the screenshot */
-	--color-background: #1f2937;
-	--color-surface: #374151;
-	--color-border: #4b5563;
-	--color-text: #f9fafb;
-	--color-text-secondary: #9ca3af;
-	--color-canvas-background: #111827;
+	/* Dark theme - Deep rich colors inspired by Mini Metro night mode */
+	--color-background: #1a202c;
+	--color-surface: #2d3748;
+	--color-border: rgba(255, 255, 255, 0.12);
+	--color-text: #f7fafc;
+	--color-text-secondary: #a0aec0;
+	--color-canvas-background: #171923;
 
 	/* Interactive elements */
-	--color-button-hover: #4b5563;
-	--color-button-hover-border: #6b7280;
-	--color-button-active: #1e3a8a;
+	--color-button-hover: rgba(255, 255, 255, 0.08);
+	--color-button-hover-border: rgba(255, 255, 255, 0.18);
+	--color-button-active: rgba(66, 153, 225, 0.2);
 
 	/* Inputs */
-	--color-input-background: #374151;
-	--color-input-border: #4b5563;
+	--color-input-background: rgba(45, 55, 72, 0.8);
+	--color-input-border: rgba(255, 255, 255, 0.15);
 
 	/* Accent colors */
-	--color-accent: #60a5fa;
-	--color-accent-hover: #3b82f6;
+	--color-accent: #4299e1;
+	--color-accent-hover: #3182ce;
 
 	/* Danger */
-	--color-danger: #f87171;
-	--color-danger-bg: #7f1d1d;
+	--color-danger: #fc8181;
+	--color-danger-bg: rgba(252, 129, 129, 0.1);
 
 	/* Shadows */
-	--shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-	--shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
-	--shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+	--shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
+	--shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+	--shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+	--shadow-xl: 0 12px 32px rgba(0, 0, 0, 0.6);
 }
 
 * {

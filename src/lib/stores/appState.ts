@@ -1,6 +1,7 @@
 import { writable } from 'svelte/store';
 import type { AppState, Theme } from '../engine/elements/types';
 import { getInitialTheme } from '$lib/utils/theme';
+import { COLOR_INDICES } from '$lib/utils/colorPalette';
 
 const getInitialThemeValue = () => (typeof window !== 'undefined' ? getInitialTheme() : 'light');
 const initialTheme = getInitialThemeValue();
@@ -10,15 +11,16 @@ const initialState: AppState = {
   scrollY: 0,
   zoom: 1.0,
   activeTool: 'selection',
-  currentStrokeColor: initialTheme === 'light' ? '#000000' : '#ffffff',
-  currentBackgroundColor: 'transparent',
+  currentStrokeColorIndex: COLOR_INDICES.DEFAULT,
+  currentBackgroundColorIndex: COLOR_INDICES.TRANSPARENT,
   currentFillStyle: 'hachure',
-  currentStrokeWidth: 2,  // Trait légèrement plus épais pour un style moderne
+  currentStrokeWidth: 2,
   currentStrokeStyle: 'solid',
-  currentRoughness: 0,  // Style plus lisse et épuré (architect mode)
+  currentRoughness: 0,
   currentOpacity: 100,
   selectedElementIds: new Set(),
-  viewBackgroundColor: initialTheme === 'light' ? '#ffffff' : '#1a1a1a',
+  hoveredElementId: null,
+  viewBackgroundColor: initialTheme === 'light' ? '#ff9f93' : '#171923',
   gridSize: null,
   isLibraryOpen: false,
   isPropertiesPanelOpen: false,
@@ -49,13 +51,12 @@ export function setTool(tool: AppState['activeTool']) {
 
 export function setTheme(theme: Theme) {
   appState.update(state => {
-    // Update default stroke color based on theme
-    const defaultStrokeColor = theme === 'light' ? '#000000' : '#ffffff';
+    const bgColor = theme === 'light' ? '#ff9f93' : '#171923';
 
     return {
       ...state,
       theme,
-      currentStrokeColor: defaultStrokeColor,
+      viewBackgroundColor: bgColor,
     };
   });
 }

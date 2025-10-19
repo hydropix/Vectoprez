@@ -3,6 +3,7 @@ import { renderElements } from '../engine/canvas/renderer';
 import { getElementsBounds } from './geometry';
 import { validateExcalidrawFile } from './validation';
 import { DEFAULT_EXPORT_SCALE, DEFAULT_EXPORT_PADDING } from '$lib/constants';
+import { getColorFromIndex } from './colorPalette';
 
 // ===== Export PNG =====
 
@@ -86,7 +87,10 @@ export function exportToSVG(
 }
 
 function elementToSVG(element: AnyExcalidrawElement): string {
-  const { x, y, width, height, strokeColor, backgroundColor, strokeWidth, opacity } = element;
+  const { x, y, width, height, strokeWidth, opacity } = element;
+
+  const strokeColor = getColorFromIndex(element.strokeColorIndex, 'light');
+  const backgroundColor = getColorFromIndex(element.backgroundColorIndex, 'light');
 
   const baseStyle = `stroke="${strokeColor}" stroke-width="${strokeWidth}" fill="${
     backgroundColor === 'transparent' ? 'none' : backgroundColor

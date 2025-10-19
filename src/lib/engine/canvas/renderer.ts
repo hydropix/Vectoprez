@@ -1,6 +1,6 @@
 import type { AnyExcalidrawElement, ArrowElement, TextElement, Theme } from '../elements/types';
 import type { ViewportTransform } from './coordinates';
-import { getThemedColor } from '$lib/utils/colorInversion';
+import { getColorFromIndex } from '$lib/utils/colorPalette';
 
 // Rendu lisse avec canvas natif pour un style moderne
 function renderSmoothShape(
@@ -51,6 +51,12 @@ function renderSmoothShape(
       ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, 2 * Math.PI);
       break;
     }
+    case 'line': {
+      // Ligne simple
+      ctx.moveTo(element.x, element.y);
+      ctx.lineTo(element.x + element.width, element.y + element.height);
+      break;
+    }
   }
 
   // Remplissage
@@ -90,17 +96,26 @@ function renderElement(
   ctx: CanvasRenderingContext2D,
   theme: Theme
 ) {
-  // Apply theme-based color inversion
-  const themedStrokeColor = getThemedColor(element.strokeColor, theme);
-  const themedBgColor = element.backgroundColor === 'transparent'
-    ? undefined
-    : getThemedColor(element.backgroundColor, theme);
+  const themedStrokeColor = getColorFromIndex(element.strokeColorIndex, theme);
+  const themedBgColor = getColorFromIndex(element.backgroundColorIndex, theme);
+  const actualBgColor = themedBgColor === 'transparent' ? undefined : themedBgColor;
 
-  // Utiliser le rendu lisse pour toutes les formes (style moderne)
+  // Apply rotation if element has angle
+  if (element.angle !== 0 && element.type !== 'arrow') {
+    const centerX = element.x + element.width / 2;
+    const centerY = element.y + element.height / 2;
+
+    ctx.save();
+    ctx.translate(centerX, centerY);
+    ctx.rotate(element.angle);
+    ctx.translate(-centerX, -centerY);
+  }
+
   switch (element.type) {
     case 'rectangle':
     case 'ellipse':
-      renderSmoothShape(element, ctx, themedStrokeColor, themedBgColor);
+    case 'line':
+      renderSmoothShape(element, ctx, themedStrokeColor, actualBgColor);
       break;
     case 'arrow':
       renderArrow(element as ArrowElement, ctx, theme);
@@ -108,6 +123,11 @@ function renderElement(
     case 'text':
       renderText(element as TextElement, ctx, theme);
       break;
+  }
+
+  // Restore context if rotation was applied
+  if (element.angle !== 0 && element.type !== 'arrow') {
+    ctx.restore();
   }
 }
 
@@ -117,7 +137,7 @@ function renderArrow(
   theme: Theme
 ) {
   const { x, y, points, strokeWidth } = arrow;
-  const themedStrokeColor = getThemedColor(arrow.strokeColor, theme);
+  const themedStrokeColor = getColorFromIndex(arrow.strokeColorIndex, theme);
 
   // Utiliser le canvas natif pour un rendu lisse et moderne
   ctx.save();
@@ -266,8 +286,7 @@ function renderArrow(
 function renderText(text: TextElement, ctx: CanvasRenderingContext2D, theme: Theme) {
   ctx.save();
 
-  // Configuration du texte with themed color
-  const themedTextColor = getThemedColor(text.strokeColor, theme);
+  const themedTextColor = getColorFromIndex(text.strokeColorIndex, theme);
   ctx.font = `${text.fontSize}px ${text.fontFamily}`;
   ctx.fillStyle = themedTextColor;
   ctx.textAlign = text.textAlign;

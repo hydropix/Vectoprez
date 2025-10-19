@@ -130,6 +130,12 @@
       on:click={() => setTool('arrow')}
     />
     <IconButton
+      icon="line"
+      title="Line (L)"
+      active={$appState.activeTool === 'line'}
+      on:click={() => setTool('line')}
+    />
+    <IconButton
       icon="text"
       title="Text (T)"
       active={$appState.activeTool === 'text'}
@@ -207,30 +213,45 @@
 <style>
   .toolbar {
     position: absolute;
-    top: 12px;
+    top: 20px;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 8px;
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+    gap: var(--spacing-sm);
+    padding: var(--spacing-md) var(--spacing-lg);
+    background: rgba(255, 255, 255, 0.95);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-full);
+    box-shadow: var(--shadow-lg);
     z-index: 100;
+    backdrop-filter: blur(12px) saturate(1.2);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .toolbar:hover {
+    box-shadow: var(--shadow-xl);
+    transform: translateX(-50%) translateY(-2px);
   }
 
   .separator {
-    width: 1px;
-    height: 28px;
+    width: 2px;
+    height: 32px;
     background: var(--color-border);
-    margin: 0 4px;
+    margin: 0 var(--spacing-xs);
+    border-radius: var(--radius-full);
+    opacity: 0.5;
   }
 
   .tool-group,
   .actions-group {
     display: flex;
-    gap: 4px;
+    gap: var(--spacing-xs);
+    align-items: center;
+  }
+
+  /* Dark theme adjustments */
+  [data-theme='dark'] .toolbar {
+    background: rgba(45, 55, 72, 0.95);
   }
 </style>
