@@ -102,5 +102,6 @@ export interface AppState {
   viewBackgroundColor: string;
   gridSize: number | null;
   isLibraryOpen: boolean;
+  isPropertiesPanelOpen: boolean;
   theme: Theme;
 }

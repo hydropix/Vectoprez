@@ -21,6 +21,7 @@ const initialState: AppState = {
   viewBackgroundColor: initialTheme === 'light' ? '#ffffff' : '#1a1a1a',
   gridSize: null,
   isLibraryOpen: false,
+  isPropertiesPanelOpen: false,
   theme: initialTheme,
 };
 

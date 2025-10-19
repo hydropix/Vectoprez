@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { appState, pan, setZoom } from '../stores/appState';
+  import { appState, pan } from '../stores/appState';
   import { elements, addElement, updateElement } from '../stores/elements';
   import { renderElements } from '../engine/canvas/renderer';
   import { screenToWorld } from '../engine/canvas/coordinates';
@@ -28,6 +28,7 @@
   import { addControlPoint, removeControlPoint } from '../engine/arrows/curves';
   import { updateArrowBoundingBox } from '../engine/arrows/boundingBox';
   import { getCanonicalColor } from '$lib/utils/colorInversion';
+  import { getCursor, type CursorType } from '$lib/utils/cursor';
   import type { Point, ArrowElement, TextElement, AnyExcalidrawElement, ExcalidrawElement } from '../engine/elements/types';
 
   let canvasEl: HTMLCanvasElement;
@@ -48,12 +49,27 @@
   let isEditingText = false;
   let editingTextElement: TextElement | null = null;
   let textInputElement: HTMLTextAreaElement | null = null;
+  let currentCursor: CursorType = 'default';
+  let isOverElement = false;
+  let isOverHandle = false;
 
   // Reactive statement to update canvas background when theme changes
   $: if ($appState.theme) {
     const bgColor = $appState.theme === 'light' ? '#ffffff' : '#1a1a1a';
     appState.update(s => ({ ...s, viewBackgroundColor: bgColor }));
   }
+
+  // Reactive statement to update cursor based on current state
+  $: currentCursor = getCursor({
+    activeTool: $appState.activeTool,
+    isPanning,
+    isDragging,
+    isDraggingHandle,
+    isDrawing,
+    isEditingText,
+    isOverElement,
+    isOverHandle,
+  });
 
   onMount(() => {
     ctx = canvasEl.getContext('2d');
@@ -155,12 +171,30 @@
 
   function handleWheel(e: WheelEvent) {
     e.preventDefault();
-    if (e.ctrlKey || e.metaKey) {
-      const delta = e.deltaY > 0 ? 0.9 : 1.1;
-      setZoom($appState.zoom * delta);
-    } else {
-      pan(-e.deltaX, -e.deltaY);
-    }
+
+    // Zoom avec la molette (sans modificateur)
+    const mouseX = e.clientX;
+    const mouseY = e.clientY;
+
+    // Position dans le monde avant le zoom
+    const worldX = (mouseX - $appState.scrollX) / $appState.zoom;
+    const worldY = (mouseY - $appState.scrollY) / $appState.zoom;
+
+    // Calculer le nouveau zoom
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    const newZoom = Math.max(0.1, Math.min(10, $appState.zoom * delta));
+
+    // Calculer le nouveau scroll pour garder le point du monde sous la souris
+    const newScrollX = mouseX - worldX * newZoom;
+    const newScrollY = mouseY - worldY * newZoom;
+
+    // Appliquer le zoom et le scroll en une seule mise à jour
+    appState.update(s => ({
+      ...s,
+      zoom: newZoom,
+      scrollX: newScrollX,
+      scrollY: newScrollY,
+    }));
   }
 
   function handleMouseDown(e: MouseEvent) {
@@ -231,8 +265,12 @@
             selectedElementIds: new Set([hitElement.id]),
           }));
         } else {
-          // Clear selection
-          appState.update(s => ({ ...s, selectedElementIds: new Set() }));
+          // Clear selection and close properties panel
+          appState.update(s => ({
+            ...s,
+            selectedElementIds: new Set(),
+            isPropertiesPanelOpen: false,
+          }));
         }
       }
     } else if (['rectangle', 'ellipse', 'diamond'].includes($appState.activeTool)) {
@@ -374,6 +412,31 @@
       { x: e.clientX, y: e.clientY },
       { scrollX: $appState.scrollX, scrollY: $appState.scrollY, zoom: $appState.zoom }
     );
+
+    // Mettre à jour l'état de survol pour le curseur
+    if (!isPanning && !isDragging && !isDraggingHandle && !isDrawing) {
+      // Vérifier si on survole un handle
+      isOverHandle = false;
+      if ($appState.activeTool === 'selection') {
+        const selectedIds = Array.from($appState.selectedElementIds);
+        for (const id of selectedIds) {
+          const element = $elements.find(el => el.id === id);
+          if (element && element.type === 'arrow') {
+            const handle = getHandleAtPosition(element as ArrowElement, worldPos, $appState.zoom);
+            if (handle) {
+              isOverHandle = true;
+              break;
+            }
+          }
+        }
+      }
+
+      // Vérifier si on survole un élément
+      if (!isOverHandle) {
+        const hitElement = getElementAtPosition($elements, worldPos);
+        isOverElement = hitElement !== null && $appState.activeTool === 'selection';
+      }
+    }
 
     if (isPanning) {
       const dx = e.clientX - lastMousePos.x;
@@ -530,8 +593,13 @@
       return;
     }
 
-    // Double-clic sur une flèche sélectionnée: convertir en courbe ou supprimer point de contrôle
+    // Si on double-clique sur un élément sélectionné, ouvrir le panneau Properties
     const selectedIds = Array.from($appState.selectedElementIds);
+    if (hitElement && selectedIds.includes(hitElement.id)) {
+      appState.update(s => ({ ...s, isPropertiesPanelOpen: true }));
+    }
+
+    // Double-clic sur une flèche sélectionnée: convertir en courbe ou supprimer point de contrôle
 
     for (const id of selectedIds) {
       const element = $elements.find(el => el.id === id);
@@ -702,6 +770,7 @@
   on:mousemove={handleMouseMove}
   on:mouseup={handleMouseUp}
   on:mouseleave={handleMouseUp}
+  style="cursor: {currentCursor}"
 />
 
 {#if isEditingText && editingTextElement}
@@ -733,6 +802,5 @@
 <style>
   canvas {
     display: block;
-    cursor: crosshair;
   }
 </style>

@@ -1,9 +1,13 @@
 <script lang="ts">
   import { get } from 'svelte/store';
-  import { appState, setTool, setZoom, setTheme } from '../stores/appState';
+  import { appState, setTool, setTheme } from '../stores/appState';
   import { elements } from '../stores/elements';
-  import { exportToPNG, exportToSVG, exportToJSON, downloadBlob, importFromJSON } from '../utils/export';
+  import { exportToPNG, exportToJSON, downloadBlob, importFromJSON } from '../utils/export';
   import { applyTheme } from '$lib/utils/theme';
+  import ConfirmModal from './ConfirmModal.svelte';
+  import IconButton from './IconButton.svelte';
+
+  let showClearModal = false;
 
   async function handleExportPNG() {
     try {
@@ -14,17 +18,6 @@
     } catch (error) {
       console.error('Export PNG failed:', error);
       alert('Export PNG failed. Make sure you have elements to export.');
-    }
-  }
-
-  function handleExportSVG() {
-    try {
-      const svg = exportToSVG(get(elements));
-      const blob = new Blob([svg], { type: 'image/svg+xml' });
-      downloadBlob(blob, 'drawing.svg');
-    } catch (error) {
-      console.error('Export SVG failed:', error);
-      alert('Export SVG failed. Make sure you have elements to export.');
     }
   }
 
@@ -63,6 +56,20 @@
     input.click();
   }
 
+  function handleClearClick() {
+    showClearModal = true;
+  }
+
+  function handleClearConfirm() {
+    elements.set([]);
+    appState.update(s => ({ ...s, selectedElementIds: new Set() }));
+    showClearModal = false;
+  }
+
+  function handleClearCancel() {
+    showClearModal = false;
+  }
+
   function toggleGrid() {
     appState.update(s => ({
       ...s,
@@ -82,81 +89,154 @@
 </script>
 
 <div class="toolbar">
-  <button on:click={() => setTool('selection')}>Selection (V)</button>
-  <button on:click={() => setTool('rectangle')}>Rectangle (R)</button>
-  <button on:click={() => setTool('ellipse')}>Ellipse (O)</button>
-  <button on:click={() => setTool('diamond')}>Diamond (D)</button>
-  <button on:click={() => setTool('arrow')}>Arrow (A)</button>
-  <button on:click={() => setTool('text')}>Text (T)</button>
-  <button on:click={() => setTool('hand')}>Hand (H)</button>
+  <!-- Lock/Unlock toggle (removed - not in current AppState) -->
+
+  <!-- Tools -->
+  <div class="tool-group">
+    <IconButton
+      icon="hand"
+      title="Hand Tool (H) - Pan around"
+      active={$appState.activeTool === 'hand'}
+      on:click={() => setTool('hand')}
+    />
+    <IconButton
+      icon="selection"
+      title="Selection (V)"
+      active={$appState.activeTool === 'selection'}
+      on:click={() => setTool('selection')}
+    />
+  </div>
 
   <div class="separator"></div>
 
-  <button on:click={() => setZoom($appState.zoom * 1.2)}>Zoom +</button>
-  <button on:click={() => setZoom($appState.zoom * 0.8)}>Zoom -</button>
-  <button on:click={() => setZoom(1)}>100%</button>
+  <!-- Shapes -->
+  <div class="tool-group">
+    <IconButton
+      icon="rectangle"
+      title="Rectangle (R)"
+      active={$appState.activeTool === 'rectangle'}
+      on:click={() => setTool('rectangle')}
+    />
+    <IconButton
+      icon="ellipse"
+      title="Ellipse (O)"
+      active={$appState.activeTool === 'ellipse'}
+      on:click={() => setTool('ellipse')}
+    />
+    <IconButton
+      icon="diamond"
+      title="Diamond (D)"
+      active={$appState.activeTool === 'diamond'}
+      on:click={() => setTool('diamond')}
+    />
+    <IconButton
+      icon="arrow"
+      title="Arrow (A)"
+      active={$appState.activeTool === 'arrow'}
+      on:click={() => setTool('arrow')}
+    />
+    <IconButton
+      icon="text"
+      title="Text (T)"
+      active={$appState.activeTool === 'text'}
+      on:click={() => setTool('text')}
+    />
+  </div>
 
   <div class="separator"></div>
 
-  <button on:click={toggleGrid} class:active={$appState.gridSize !== null}>
-    Grid {$appState.gridSize !== null ? '✓' : ''}
-  </button>
+  <!-- View options -->
+  <IconButton
+    icon="grid"
+    title="Toggle Grid"
+    active={$appState.gridSize !== null}
+    on:click={toggleGrid}
+  />
 
   <div class="separator"></div>
 
-  <button on:click={toggleTheme}>
-    {$appState.theme === 'light' ? '🌙' : '☀️'}
-  </button>
+  <!-- Library -->
+  <IconButton
+    icon="library"
+    title="Library"
+    active={$appState.isLibraryOpen}
+    on:click={toggleLibrary}
+  />
 
   <div class="separator"></div>
 
-  <button on:click={toggleLibrary} class:active={$appState.isLibraryOpen}>
-    Library {$appState.isLibraryOpen ? '✓' : ''}
-  </button>
+  <!-- Theme -->
+  <IconButton
+    icon={$appState.theme === 'light' ? 'moon' : 'sun'}
+    title="Toggle Theme"
+    on:click={toggleTheme}
+  />
 
   <div class="separator"></div>
 
-  <button on:click={handleExportPNG}>Export PNG</button>
-  <button on:click={handleExportSVG}>Export SVG</button>
-  <button on:click={handleExportJSON}>Save JSON</button>
-  <button on:click={handleImportJSON}>Load JSON</button>
+  <!-- Actions -->
+  <div class="actions-group">
+    <IconButton
+      icon="trash"
+      title="Clear Canvas"
+      variant="danger"
+      on:click={handleClearClick}
+    />
+    <IconButton
+      icon="download"
+      title="Export PNG"
+      on:click={handleExportPNG}
+    />
+    <IconButton
+      icon="save"
+      title="Save JSON"
+      on:click={handleExportJSON}
+    />
+    <IconButton
+      icon="upload"
+      title="Load JSON"
+      on:click={handleImportJSON}
+    />
+  </div>
 </div>
+
+<ConfirmModal
+  bind:isOpen={showClearModal}
+  title="Clear Canvas?"
+  message="This will delete all elements from your canvas. This action cannot be undone."
+  confirmText="Clear"
+  cancelText="Cancel"
+  onConfirm={handleClearConfirm}
+  onCancel={handleClearCancel}
+/>
 
 <style>
   .toolbar {
     position: absolute;
-    top: 10px;
-    left: 10px;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
-    gap: 8px;
+    align-items: center;
+    gap: 4px;
     padding: 8px;
     background: var(--color-surface);
     border: 1px solid var(--color-border);
-    border-radius: 4px;
-    z-index: 10;
-  }
-
-  button {
-    padding: 8px 12px;
-    cursor: pointer;
-    background: var(--color-background);
-    color: var(--color-text);
-    border: 1px solid var(--color-border);
-    border-radius: 2px;
-    transition: background-color 0.2s;
-  }
-
-  button:hover {
-    background: var(--color-button-hover);
-  }
-
-  button.active {
-    background: var(--color-button-active);
-    border-color: #4dabf7;
+    border-radius: 8px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+    z-index: 100;
   }
 
   .separator {
     width: 1px;
+    height: 28px;
     background: var(--color-border);
+    margin: 0 4px;
+  }
+
+  .tool-group,
+  .actions-group {
+    display: flex;
+    gap: 4px;
   }
 </style>
