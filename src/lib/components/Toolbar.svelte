@@ -4,10 +4,25 @@
   import { elements } from '../stores/elements';
   import { exportToPNG, exportToJSON, downloadBlob, importFromJSON } from '../utils/export';
   import { applyTheme } from '$lib/utils/theme';
+  import { history } from '$lib/engine/history/undoRedo';
   import ConfirmModal from './ConfirmModal.svelte';
   import IconButton from './IconButton.svelte';
 
   let showClearModal = false;
+
+  function handleUndo() {
+    const result = history.undo();
+    if (result !== null) {
+      elements.set(result);
+    }
+  }
+
+  function handleRedo() {
+    const result = history.redo();
+    if (result !== null) {
+      elements.set(result);
+    }
+  }
 
   async function handleExportPNG() {
     try {
@@ -136,6 +151,23 @@
       title="Text (T)"
       active={$appState.activeTool === 'text'}
       on:click={() => setTool('text')}
+    />
+  </div>
+
+  <div class="separator"></div>
+
+  <div class="tool-group">
+    <IconButton
+      icon="undo"
+      title="Undo (Ctrl+Z)"
+      disabled={!history.canUndo()}
+      on:click={handleUndo}
+    />
+    <IconButton
+      icon="redo"
+      title="Redo (Ctrl+Y)"
+      disabled={!history.canRedo()}
+      on:click={handleRedo}
     />
   </div>
 

@@ -37,8 +37,10 @@ export function updateTextDimensions(
 
   ctx.restore();
 
+  const padding = 10;
+
   return {
-    width: Math.max(100, maxWidth + 10),
+    width: maxWidth + padding,
     height: textHeight,
   };
 }

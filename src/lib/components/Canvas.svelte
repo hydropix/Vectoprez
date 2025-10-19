@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { appState, pan } from '../stores/appState';
-  import { elements, addElement, updateElement } from '../stores/elements';
+  import { elements, addElement, updateElement, deleteElements } from '../stores/elements';
   import { renderElements } from '../engine/canvas/renderer';
   import { screenToWorld } from '../engine/canvas/coordinates';
   import { createElement } from '../engine/elements/factory';
@@ -45,6 +45,8 @@
   import type { Bounds } from '../engine/container/autoResize';
   import { isValidContainerType } from '../engine/container/detection';
   import { updateTextDimensions, shouldDeleteEmptyText } from '../engine/text/editing';
+  import { calculateTextScale } from '../engine/text/transform';
+  import { MIN_ELEMENT_SIZE_SCREEN } from '../constants';
 
   let canvasEl: HTMLCanvasElement;
   let ctx: CanvasRenderingContext2D | null = null;
@@ -78,6 +80,7 @@
   let clickedGroupElement: AnyExcalidrawElement | null = null;
   let lastClickTime = 0;
   let lastClickPos: Point | null = null;
+  let justHandledDoubleClick = false;
   let isEditingText = false;
   let editingTextElement: TextElement | null = null;
   let textInputElement: HTMLTextAreaElement | null = null;
@@ -403,11 +406,20 @@
       Math.abs(worldPos.y - lastClickPos.y) < DISTANCE_THRESHOLD;
 
     if (isDoubleClick) {
+      if (currentElementId) {
+        elements.update(els => els.filter(el => el.id !== currentElementId));
+        currentElementId = null;
+        isDrawing = false;
+        drawStart = null;
+      }
+      justHandledDoubleClick = true;
       handleDoubleClick(worldPos);
       lastClickTime = 0;
       lastClickPos = null;
       return;
     }
+
+    justHandledDoubleClick = false;
 
     lastClickTime = now;
     lastClickPos = worldPos;
@@ -745,14 +757,12 @@
       const dy = e.clientY - lastMousePos.y;
       pan(dx, dy);
       lastMousePos = { x: e.clientX, y: e.clientY };
-    } else if (isDraggingTransformHandle && draggedTransformHandle && transformStartPoint && transformOriginalElement) {
-      // Transform handling (resize or rotate)
+    } else if (isDraggingTransformHandle && draggedTransformHandle && transformStartPoint && transformOriginalElement && ctx) {
       const selectedIds = Array.from($appState.selectedElementIds);
       if (selectedIds.length === 1) {
         const elementId = selectedIds[0];
 
         if (draggedTransformHandle.type === 'rotate') {
-          // Rotation
           const newAngle = calculateRotation(transformOriginalElement, worldPos);
           const snappedAngle = e.shiftKey ? snapRotation(newAngle, true) : newAngle;
 
@@ -760,16 +770,27 @@
             angle: snappedAngle,
           } as any);
         } else {
-          // Resize
-          const resizeResult = calculateResize(
-            transformOriginalElement,
-            draggedTransformHandle.type,
-            transformStartPoint,
-            worldPos,
-            e.shiftKey // Maintain aspect ratio with Shift
-          );
+          if (transformOriginalElement.type === 'text') {
+            const scaleResult = calculateTextScale(
+              transformOriginalElement as TextElement,
+              draggedTransformHandle.type,
+              transformStartPoint,
+              worldPos,
+              ctx
+            );
 
-          updateElement(elementId, resizeResult as any);
+            updateElement(elementId, scaleResult as any);
+          } else {
+            const resizeResult = calculateResize(
+              transformOriginalElement,
+              draggedTransformHandle.type,
+              transformStartPoint,
+              worldPos,
+              e.shiftKey
+            );
+
+            updateElement(elementId, resizeResult as any);
+          }
         }
       }
     } else if (isDraggingHandle && draggedHandle && draggedArrow) {
@@ -875,7 +896,6 @@
 
         updateElement(currentElementId, tempArrow as any);
       } else {
-        // Redimensionner l'élément en cours de création
         const width = worldPos.x - drawStart.x;
         const height = worldPos.y - drawStart.y;
 
@@ -952,6 +972,11 @@
   }
 
   function handleMouseUp() {
+    if (justHandledDoubleClick) {
+      justHandledDoubleClick = false;
+      return;
+    }
+
     if (isDrawingSelectionBox && selectionBoxStart && selectionBoxCurrent) {
       const box = normalizeSelectionBox(selectionBoxStart, selectionBoxCurrent);
       const selectedElements = getElementsInSelectionBox($elements, box, 'center');
@@ -972,6 +997,42 @@
       if (arrow && arrow.type === 'arrow') {
         const updatedArrow = updateArrowBoundingBox(arrow as ArrowElement);
         updateElement(currentElementId, updatedArrow as any);
+      }
+    }
+
+    if (isDrawing && drawStart && currentElementId && ['rectangle', 'ellipse', 'line'].includes($appState.activeTool)) {
+      const element = $elements.find(el => el.id === currentElementId);
+      if (element) {
+        const widthInScreen = Math.abs(element.width) * $appState.zoom;
+        const heightInScreen = Math.abs(element.height) * $appState.zoom;
+
+        if (widthInScreen < MIN_ELEMENT_SIZE_SCREEN && heightInScreen < MIN_ELEMENT_SIZE_SCREEN) {
+          deleteElements([currentElementId]);
+          isDrawing = false;
+          drawStart = null;
+          currentElementId = null;
+          return;
+        }
+      }
+    }
+
+    if (isDrawing && drawStart && currentElementId && $appState.activeTool === 'arrow') {
+      const arrow = $elements.find(el => el.id === currentElementId);
+      if (arrow && arrow.type === 'arrow') {
+        const points = (arrow as ArrowElement).points;
+        if (points.length >= 2) {
+          const dx = points[points.length - 1].x - points[0].x;
+          const dy = points[points.length - 1].y - points[0].y;
+          const distanceInScreen = Math.sqrt(dx * dx + dy * dy) * $appState.zoom;
+
+          if (distanceInScreen < MIN_ELEMENT_SIZE_SCREEN) {
+            deleteElements([currentElementId]);
+            isDrawing = false;
+            drawStart = null;
+            currentElementId = null;
+            return;
+          }
+        }
       }
     }
 

@@ -25,6 +25,9 @@ export const DEFAULT_ZOOM = 1.0;
 // Grid
 export const DEFAULT_GRID_SIZE = 20; // pixels
 
+// Element Constraints
+export const MIN_ELEMENT_SIZE_SCREEN = 32; // pixels - minimum size in screen space for visibility
+
 // Export
 export const DEFAULT_EXPORT_SCALE = 2; // for PNG export
 export const DEFAULT_EXPORT_PADDING = 20; // pixels
