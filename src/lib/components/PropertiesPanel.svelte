@@ -28,8 +28,6 @@
 	}
 
 	function handleDuplicate() {
-		// TODO: Implement duplicate functionality
-		console.log('Duplicate selected elements');
 	}
 
 	function handleDelete() {
@@ -40,13 +38,9 @@
 	}
 
 	function bringToFront() {
-		// TODO: Implement bring to front
-		console.log('Bring to front');
 	}
 
 	function sendToBack() {
-		// TODO: Implement send to back
-		console.log('Send to back');
 	}
 </script>
 
@@ -200,7 +194,7 @@
 				icon="link"
 				title="Create Link"
 				size="small"
-				on:click={() => console.log('Create link')}
+				on:click={() => {}}
 			/>
 		</div>
 	</div>
@@ -258,7 +252,6 @@
 		flex-wrap: wrap;
 	}
 
-	/* Dark theme adjustments */
 	[data-theme='dark'] .properties-panel {
 		background: rgba(45, 55, 72, 0.98);
 	}
@@ -340,7 +333,6 @@
 		border-radius: var(--radius-sm);
 	}
 
-	/* Custom scrollbar */
 	.properties-panel::-webkit-scrollbar {
 		width: 10px;
 	}

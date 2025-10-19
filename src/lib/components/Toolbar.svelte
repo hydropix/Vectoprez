@@ -89,9 +89,6 @@
 </script>
 
 <div class="toolbar">
-  <!-- Lock/Unlock toggle (removed - not in current AppState) -->
-
-  <!-- Tools -->
   <div class="tool-group">
     <IconButton
       icon="hand"
@@ -109,7 +106,6 @@
 
   <div class="separator"></div>
 
-  <!-- Shapes -->
   <div class="tool-group">
     <IconButton
       icon="rectangle"
@@ -145,7 +141,6 @@
 
   <div class="separator"></div>
 
-  <!-- View options -->
   <IconButton
     icon="grid"
     title="Toggle Grid"
@@ -155,7 +150,6 @@
 
   <div class="separator"></div>
 
-  <!-- Library -->
   <IconButton
     icon="library"
     title="Library"
@@ -165,7 +159,6 @@
 
   <div class="separator"></div>
 
-  <!-- Theme -->
   <IconButton
     icon={$appState.theme === 'light' ? 'moon' : 'sun'}
     title="Toggle Theme"
@@ -174,7 +167,6 @@
 
   <div class="separator"></div>
 
-  <!-- Actions -->
   <div class="actions-group">
     <IconButton
       icon="trash"
@@ -250,7 +242,6 @@
     align-items: center;
   }
 
-  /* Dark theme adjustments */
   [data-theme='dark'] .toolbar {
     background: rgba(45, 55, 72, 0.95);
   }

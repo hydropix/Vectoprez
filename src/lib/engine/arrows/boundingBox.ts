@@ -1,8 +1,5 @@
 import type { ArrowElement, Point } from '../elements/types';
 
-/**
- * Calcule le bounding box d'une flèche en fonction de ses points
- */
 export function calculateArrowBoundingBox(arrow: ArrowElement): {
   x: number;
   y: number;
@@ -13,7 +10,6 @@ export function calculateArrowBoundingBox(arrow: ArrowElement): {
     return { x: arrow.x, y: arrow.y, width: 0, height: 0 };
   }
 
-  // Trouver les coordonnées min/max
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
@@ -37,9 +33,6 @@ export function calculateArrowBoundingBox(arrow: ArrowElement): {
   };
 }
 
-/**
- * Met à jour le bounding box d'une flèche et ajuste les points en conséquence
- */
 export function updateArrowBoundingBox(arrow: ArrowElement): ArrowElement {
   if (arrow.points.length === 0) {
     return arrow;
@@ -47,7 +40,6 @@ export function updateArrowBoundingBox(arrow: ArrowElement): ArrowElement {
 
   const bbox = calculateArrowBoundingBox(arrow);
 
-  // Ajuster les points pour qu'ils soient relatifs au nouveau bounding box
   const newPoints = arrow.points.map(point => ({
     x: arrow.x + point.x - bbox.x,
     y: arrow.y + point.y - bbox.y,
@@ -63,9 +55,6 @@ export function updateArrowBoundingBox(arrow: ArrowElement): ArrowElement {
   };
 }
 
-/**
- * Normalise les points d'une flèche pour que le point (0,0) soit en haut à gauche
- */
 export function normalizeArrowPoints(points: Point[]): {
   normalizedPoints: Point[];
   offsetX: number;
@@ -75,7 +64,6 @@ export function normalizeArrowPoints(points: Point[]): {
     return { normalizedPoints: [], offsetX: 0, offsetY: 0 };
   }
 
-  // Trouver les coordonnées min
   let minX = Infinity;
   let minY = Infinity;
 
@@ -84,7 +72,6 @@ export function normalizeArrowPoints(points: Point[]): {
     minY = Math.min(minY, point.y);
   }
 
-  // Normaliser les points
   const normalizedPoints = points.map(point => ({
     x: point.x - minX,
     y: point.y - minY,

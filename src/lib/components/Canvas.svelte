@@ -92,13 +92,12 @@
   let isOverTransformHandle = false;
   let hoverTransformHandleType: TransformHandle | null = null;
 
-  // Reactive statement to update canvas background when theme changes
   $: if ($appState.theme) {
     const bgColor = $appState.theme === 'light' ? '#ff9f93' : '#171923';
     appState.update(s => ({ ...s, viewBackgroundColor: bgColor }));
   }
 
-  // Reactive statement to update cursor based on current state
+
   $: {
     if (isDraggingTransformHandle && draggedTransformHandle && transformOriginalElement) {
       currentCursor = draggedTransformHandle.type === 'rotate'
@@ -186,7 +185,6 @@
 
   function renderGrid(ctx: CanvasRenderingContext2D, state: typeof $appState) {
     const gridSize = state.gridSize!;
-    // Subtle grid with dots instead of lines for modern look
     const dotSize = 1.5;
     ctx.fillStyle = state.theme === 'light'
       ? 'rgba(0, 0, 0, 0.08)'
@@ -197,7 +195,6 @@
     const endX = startX + (canvasEl.width / state.zoom);
     const endY = startY + (canvasEl.height / state.zoom);
 
-    // Draw dots at grid intersections
     for (let x = startX; x < endX; x += gridSize) {
       for (let y = startY; y < endY; y += gridSize) {
         ctx.beginPath();
@@ -300,13 +297,9 @@
   }
 
   function renderHoverFeedback(ctx: CanvasRenderingContext2D) {
-    // Ne pas afficher le feedback si pas d'élément survolé
     if (!$appState.hoveredElementId) return;
-
-    // Ne pas afficher si l'élément est déjà sélectionné
     if ($appState.selectedElementIds.has($appState.hoveredElementId)) return;
 
-    // Trouver l'élément survolé
     const hoveredElement = $elements.find(el => el.id === $appState.hoveredElementId);
     if (!hoveredElement) return;
 
@@ -314,21 +307,16 @@
     ctx.translate($appState.scrollX, $appState.scrollY);
     ctx.scale($appState.zoom, $appState.zoom);
 
-    // Marge identique à celle des transform handles (10px)
     const HANDLE_MARGIN = 10;
     const margin = HANDLE_MARGIN / $appState.zoom;
 
-    // Style du contour gris avec effet de glow - transparent (40% d'opacité)
     ctx.shadowColor = 'rgba(128, 128, 128, 0.25)';
     ctx.shadowBlur = 12 / $appState.zoom;
-
-    ctx.strokeStyle = 'rgba(128, 128, 128, 0.4)'; // Gris à 40% d'opacité
+    ctx.strokeStyle = 'rgba(128, 128, 128, 0.4)';
     ctx.lineWidth = 3.5 / $appState.zoom;
-    ctx.setLineDash([]); // Ligne solide
+    ctx.setLineDash([]);
 
-    // Dessiner le contour autour de l'élément avec marge
     if (hoveredElement.type === 'arrow') {
-      // Pour les flèches, on dessine autour du bounding box
       const arrow = hoveredElement as ArrowElement;
       ctx.strokeRect(
         arrow.x - margin,
@@ -337,7 +325,6 @@
         arrow.height + margin * 2
       );
     } else {
-      // Pour les autres éléments, utiliser leur position et dimension
       ctx.strokeRect(
         hoveredElement.x - margin,
         hoveredElement.y - margin,
@@ -346,7 +333,6 @@
       );
     }
 
-    // Reset
     ctx.setLineDash([]);
     ctx.shadowColor = 'transparent';
     ctx.shadowBlur = 0;
@@ -357,23 +343,18 @@
   function handleWheel(e: WheelEvent) {
     e.preventDefault();
 
-    // Zoom avec la molette (sans modificateur)
     const mouseX = e.clientX;
     const mouseY = e.clientY;
 
-    // Position dans le monde avant le zoom
     const worldX = (mouseX - $appState.scrollX) / $appState.zoom;
     const worldY = (mouseY - $appState.scrollY) / $appState.zoom;
 
-    // Calculer le nouveau zoom
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
     const newZoom = Math.max(0.1, Math.min(10, $appState.zoom * delta));
 
-    // Calculer le nouveau scroll pour garder le point du monde sous la souris
     const newScrollX = mouseX - worldX * newZoom;
     const newScrollY = mouseY - worldY * newZoom;
 
-    // Appliquer le zoom et le scroll en une seule mise à jour
     appState.update(s => ({
       ...s,
       zoom: newZoom,
@@ -388,10 +369,9 @@
       { scrollX: $appState.scrollX, scrollY: $appState.scrollY, zoom: $appState.zoom }
     );
 
-    // Détecter double-clic
     const now = Date.now();
-    const DOUBLE_CLICK_THRESHOLD = 300; // ms
-    const DISTANCE_THRESHOLD = 5; // pixels
+    const DOUBLE_CLICK_THRESHOLD = 300;
+    const DISTANCE_THRESHOLD = 5;
     const isDoubleClick = lastClickPos &&
       now - lastClickTime < DOUBLE_CLICK_THRESHOLD &&
       Math.abs(worldPos.x - lastClickPos.x) < DISTANCE_THRESHOLD &&
@@ -455,7 +435,6 @@
         }
       }
 
-      // Priority 2: Check arrow handles
       if (!handleClicked && !isDrawing) {
         for (const id of selectedIds) {
           const element = $elements.find(el => el.id === id);
@@ -472,7 +451,6 @@
         }
       }
 
-      // Priority 3: Check line handles
       if (!handleClicked && !isDrawing) {
         for (const id of selectedIds) {
           const element = $elements.find(el => el.id === id);
@@ -564,11 +542,9 @@
       currentElementId = newElement.id!;
       history.record($elements);
     } else if ($appState.activeTool === 'arrow') {
-      // Commencer à dessiner une flèche
       isDrawing = true;
       drawStart = worldPos;
 
-      // Vérifier binding au début
       const startBindingElement = getBindableElementAtPosition($elements, worldPos);
       const startBinding = startBindingElement
         ? calculateBinding(worldPos, startBindingElement)
@@ -595,7 +571,6 @@
       addElement(newArrow);
       currentElementId = newArrow.id;
 
-      // Ajouter boundElement au startBinding
       if (startBinding && startBindingElement && 'boundElements' in startBindingElement) {
         updateElement(startBindingElement.id, {
           boundElements: [
@@ -607,10 +582,8 @@
 
       history.record($elements);
     } else if ($appState.activeTool === 'text') {
-      // Créer un élément texte
-      isDrawing = false; // Pas de dessin pour le texte
+      isDrawing = false;
 
-      // Créer un texte initial
       const fontSize = 20;
       const estimatedWidth = 100;
       const estimatedHeight = fontSize * 1.2;
@@ -635,13 +608,11 @@
         binding: textBinding,
       };
 
-      // Si accrochage, calculer la position correcte
       if (textBinding && bindingElement) {
         const position = getTextBindingPosition(textBinding, bindingElement, estimatedWidth, estimatedHeight);
         newText.x = position.x;
         newText.y = position.y;
 
-        // Ajouter le boundElement
         if ('boundElements' in bindingElement) {
           updateElement(bindingElement.id, {
             boundElements: [
@@ -653,8 +624,6 @@
       }
 
       addElement(newText);
-
-      // Démarrer l'édition du texte
       startTextEditing(newText);
 
       history.record($elements);
@@ -1006,7 +975,13 @@
         // Redimensionner l'élément en cours de création
         const width = worldPos.x - drawStart.x;
         const height = worldPos.y - drawStart.y;
-        updateElement(currentElementId, { width, height } as any);
+
+        const absWidth = Math.abs(width);
+        const absHeight = Math.abs(height);
+        const x = width < 0 ? drawStart.x + width : drawStart.x;
+        const y = height < 0 ? drawStart.y + height : drawStart.y;
+
+        updateElement(currentElementId, { x, y, width: absWidth, height: absHeight } as any);
       }
     }
   }

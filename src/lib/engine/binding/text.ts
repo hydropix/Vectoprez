@@ -6,11 +6,8 @@ import type {
   AnyExcalidrawElement,
 } from '../elements/types';
 
-const BINDING_THRESHOLD = 20; // pixels
+const BINDING_THRESHOLD = 20;
 
-/**
- * Détecte si un point est proche d'un élément bindable
- */
 export function getBindableElementForText(
   elements: AnyExcalidrawElement[],
   point: Point,
@@ -41,9 +38,6 @@ function isPointNearElement(
   );
 }
 
-/**
- * Calcule la position idéale pour un texte par rapport à un élément
- */
 export function calculateTextBinding(
   point: Point,
   element: ExcalidrawElement,
@@ -58,18 +52,14 @@ export function calculateTextBinding(
   const dx = point.x - centerX;
   const dy = point.y - centerY;
 
-  // Déterminer la position en fonction de la distance du centre
   const absDx = Math.abs(dx);
   const absDy = Math.abs(dy);
 
   let position: TextBinding['position'];
 
-  // Si proche du centre, position center
   if (absDx < width / 4 && absDy < height / 4) {
     position = 'center';
-  }
-  // Sinon déterminer le côté le plus proche
-  else if (absDx > absDy) {
+  } else if (absDx > absDy) {
     position = dx > 0 ? 'right' : 'left';
   } else {
     position = dy > 0 ? 'bottom' : 'top';
@@ -80,7 +70,6 @@ export function calculateTextBinding(
     position,
   };
 
-  // Si on veut préserver la position exacte, calculer l'offset
   if (preserveExactPosition) {
     const calculatedPosition = getTextBindingPosition(binding, element, textWidth, textHeight);
     binding.offset = {
@@ -92,9 +81,6 @@ export function calculateTextBinding(
   return binding;
 }
 
-/**
- * Obtenir la position absolue d'un texte en fonction de son binding
- */
 export function getTextBindingPosition(
   binding: TextBinding,
   element: ExcalidrawElement,
@@ -102,7 +88,7 @@ export function getTextBindingPosition(
   textHeight: number
 ): Point {
   const { x, y, width, height } = element;
-  const gap = 10; // Espacement standard
+  const gap = 10;
 
   let px: number, py: number;
 
@@ -129,7 +115,6 @@ export function getTextBindingPosition(
       break;
   }
 
-  // Appliquer l'offset personnalisé si présent
   if (binding.offset) {
     px += binding.offset.x;
     py += binding.offset.y;
@@ -138,9 +123,6 @@ export function getTextBindingPosition(
   return { x: px, y: py };
 }
 
-/**
- * Met à jour la position des textes liés quand un élément est déplacé
- */
 export function updateBoundTextElements(
   elements: AnyExcalidrawElement[],
   movedElementId: string,
@@ -164,7 +146,6 @@ export function updateBoundTextElements(
       return el;
     }
 
-    // Calculer les dimensions du texte
     const textMetrics = measureText(textEl, ctx);
     const newPosition = getTextBindingPosition(
       textEl.binding,
@@ -181,15 +162,11 @@ export function updateBoundTextElements(
   });
 }
 
-/**
- * Mesure les dimensions d'un élément texte
- */
 function measureText(
   textEl: TextElement,
   ctx?: CanvasRenderingContext2D
 ): { width: number; height: number } {
   if (!ctx) {
-    // Estimation approximative si pas de contexte
     const charWidth = textEl.fontSize * 0.6;
     return {
       width: textEl.text.length * charWidth,
@@ -204,13 +181,10 @@ function measureText(
 
   return {
     width: metrics.width,
-    height: textEl.fontSize * 1.2, // Approximation de la hauteur
+    height: textEl.fontSize * 1.2,
   };
 }
 
-/**
- * Recalcule l'offset d'un texte quand il est déplacé manuellement
- */
 export function updateTextBindingOffset(
   textElement: TextElement,
   boundElement: ExcalidrawElement,
@@ -240,9 +214,6 @@ export function updateTextBindingOffset(
   };
 }
 
-/**
- * Vérifie si un binding est toujours valide
- */
 export function isBindingValid(
   textElement: TextElement,
   elements: AnyExcalidrawElement[]

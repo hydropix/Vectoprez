@@ -10,7 +10,6 @@ class History {
   private future: HistoryEntry[] = [];
 
   record(elements: AnyExcalidrawElement[]) {
-    // Deep copy to avoid mutations - structuredClone preserves Sets, Maps, etc.
     const entry: HistoryEntry = {
       elements: structuredClone(elements),
     };
@@ -20,7 +19,6 @@ class History {
       this.past.shift();
     }
 
-    // Clear future when a new action is performed
     this.future = [];
   }
 

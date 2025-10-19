@@ -5,8 +5,6 @@ import { validateExcalidrawFile } from './validation';
 import { DEFAULT_EXPORT_SCALE, DEFAULT_EXPORT_PADDING } from '$lib/constants';
 import { getColorFromIndex } from './colorPalette';
 
-// ===== Export PNG =====
-
 export async function exportToPNG(
   elements: AnyExcalidrawElement[],
   options: {
@@ -21,11 +19,9 @@ export async function exportToPNG(
     padding = DEFAULT_EXPORT_PADDING
   } = options;
 
-  // Calculate bounding box
   const bounds = getElementsBounds(elements);
   if (!bounds) throw new Error('No elements to export');
 
-  // Create temporary canvas
   const canvas = document.createElement('canvas');
   canvas.width = (bounds.width + padding * 2) * scale;
   canvas.height = (bounds.height + padding * 2) * scale;
@@ -33,14 +29,11 @@ export async function exportToPNG(
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Cannot get canvas context');
 
-  // Apply scale
   ctx.scale(scale, scale);
 
-  // Background
   ctx.fillStyle = backgroundColor;
   ctx.fillRect(0, 0, canvas.width / scale, canvas.height / scale);
 
-  // Render elements with offset
   renderElements(ctx, elements, {
     scrollX: -bounds.x + padding,
     scrollY: -bounds.y + padding,
@@ -54,8 +47,6 @@ export async function exportToPNG(
     }, 'image/png');
   });
 }
-
-// ===== Export SVG =====
 
 export function exportToSVG(
   elements: AnyExcalidrawElement[],
@@ -88,7 +79,6 @@ export function exportToSVG(
 
 function elementToSVG(element: AnyExcalidrawElement): string {
   const { x, y, width, height, strokeWidth, opacity } = element;
-
   const strokeColor = getColorFromIndex(element.strokeColorIndex, 'light');
   const backgroundColor = getColorFromIndex(element.backgroundColorIndex, 'light');
 
@@ -152,9 +142,6 @@ function elementToSVG(element: AnyExcalidrawElement): string {
   }
 }
 
-/**
- * Escape XML special characters
- */
 function escapeXml(text: string): string {
   return text
     .replace(/&/g, '&amp;')
@@ -163,8 +150,6 @@ function escapeXml(text: string): string {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&apos;');
 }
-
-// ===== Export/Import JSON =====
 
 export interface ExcalidrawFile {
   type: 'excalidraw';
@@ -188,14 +173,9 @@ export function exportToJSON(
 
 export function importFromJSON(json: string): ExcalidrawFile {
   const data = JSON.parse(json);
-
-  // Validate the file structure
   validateExcalidrawFile(data);
-
   return data as ExcalidrawFile;
 }
-
-// ===== Utility =====
 
 export function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);

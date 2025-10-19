@@ -18,17 +18,14 @@
 	}
 
 	function handleInsertFromLibrary(item: LibraryItem) {
-		// Ins�rer les �l�ments au centre du viewport
 		const state = get(appState);
 		const centerX = -state.scrollX / state.zoom;
 		const centerY = -state.scrollY / state.zoom;
 
-		// Calculer offset pour centrer
 		const bounds = getItemBounds(item.elements);
 		const offsetX = centerX - bounds.x - bounds.width / 2;
 		const offsetY = centerY - bounds.y - bounds.height / 2;
 
-		// Dupliquer et d�caler �l�ments
 		const newElements = item.elements.map((el) => ({
 			...el,
 			id: crypto.randomUUID(),
@@ -71,7 +68,6 @@
 			{#each $library as item (item.id)}
 				<div class="library-item">
 					<div class="item-preview">
-						<!-- Miniature simplifi�e -->
 						<div class="preview-placeholder">{item.elements.length} elements</div>
 					</div>
 					<div class="item-info">
@@ -113,7 +109,6 @@
 		box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
 	}
 
-	/* Dark theme adjustments */
 	[data-theme='dark'] .library-panel {
 		background: rgba(45, 55, 72, 0.98);
 	}
@@ -285,7 +280,6 @@
 		font-weight: 500;
 	}
 
-	/* Custom scrollbar */
 	.library-items::-webkit-scrollbar {
 		width: 10px;
 	}

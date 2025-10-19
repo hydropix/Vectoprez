@@ -41,20 +41,17 @@ export function calculateBinding(
   const centerX = x + width / 2;
   const centerY = y + height / 2;
 
-  // Calculer le point le plus proche sur le périmètre
   const dx = point.x - centerX;
   const dy = point.y - centerY;
 
-  // Focus: position normalisée (-1 à 1)
   const focus = Math.atan2(dy, dx) / Math.PI;
 
   const binding: Binding = {
     elementId: element.id,
     focus,
-    gap: 10, // Gap standard de 10px
+    gap: 10,
   };
 
-  // Si on veut préserver la position exacte, calculer l'offset
   if (preserveExactPosition) {
     const calculatedPoint = getBindingPoint(binding, element);
     binding.offset = {
@@ -74,10 +71,8 @@ export function getBindingPoint(
   const centerX = x + width / 2;
   const centerY = y + height / 2;
 
-  // Convertir focus en angle
   const angle = binding.focus * Math.PI;
 
-  // Calculer point sur le p�rim�tre
   let px: number, py: number;
 
   if (element.type === 'ellipse') {
@@ -86,20 +81,17 @@ export function getBindingPoint(
     px = centerX + rx * Math.cos(angle);
     py = centerY + ry * Math.sin(angle);
   } else {
-    // Rectangle: approximation
     const rx = width / 2;
     const ry = height / 2;
     px = centerX + rx * Math.cos(angle);
     py = centerY + ry * Math.sin(angle);
 
-    // Clipper au rectangle
     if (px < x) px = x;
     if (px > x + width) px = x + width;
     if (py < y) py = y;
     if (py > y + height) py = y + height;
   }
 
-  // Appliquer gap
   const gapDx = binding.gap * Math.cos(angle);
   const gapDy = binding.gap * Math.sin(angle);
 
@@ -108,7 +100,6 @@ export function getBindingPoint(
     y: py + gapDy,
   };
 
-  // Appliquer l'offset personnalisé si présent
   if (binding.offset) {
     point.x += binding.offset.x;
     point.y += binding.offset.y;
@@ -138,7 +129,6 @@ export function updateBoundElements(
     let updated = false;
     const newPoints = [...arrow.points];
 
-    // Update start binding
     if (arrow.startBinding?.elementId === movedElementId) {
       const bindingPoint = getBindingPoint(arrow.startBinding, movedExcElement);
       newPoints[0] = {
@@ -148,7 +138,6 @@ export function updateBoundElements(
       updated = true;
     }
 
-    // Update end binding
     if (arrow.endBinding?.elementId === movedElementId) {
       const bindingPoint = getBindingPoint(arrow.endBinding, movedExcElement);
       const lastIdx = newPoints.length - 1;
@@ -173,7 +162,6 @@ export function updateArrowBindingOffsets(
   let updatedArrow = { ...arrowElement };
   let hasChanges = false;
 
-  // Recalculer l'offset du startBinding si présent
   if (updatedArrow.startBinding) {
     const boundElement = elements.find(el => el.id === updatedArrow.startBinding!.elementId);
     if (boundElement && boundElement.type !== 'arrow' && boundElement.type !== 'text') {
@@ -187,7 +175,6 @@ export function updateArrowBindingOffsets(
     }
   }
 
-  // Recalculer l'offset du endBinding si présent
   if (updatedArrow.endBinding) {
     const boundElement = elements.find(el => el.id === updatedArrow.endBinding!.elementId);
     if (boundElement && boundElement.type !== 'arrow' && boundElement.type !== 'text') {
