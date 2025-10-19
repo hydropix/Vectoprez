@@ -35,7 +35,7 @@ export function addToLibrary(name: string, elements: AnyExcalidrawElement[]) {
 	const item: LibraryItem = {
 		id: crypto.randomUUID(),
 		name,
-		elements: structuredClone(elements), // Deep copy - preserves complex types
+		elements: structuredClone(elements),
 		createdAt: Date.now()
 	};
 	library.update((items) => [item, ...items]);

@@ -53,6 +53,7 @@
 			<ColorPalette
 				selectedColorIndex={selectedElements[0].strokeColorIndex}
 				onColorSelect={handleStrokeColorSelect}
+				showNoStroke={true}
 				layout="horizontal"
 			/>
 		</div>
@@ -96,32 +97,6 @@
 			/>
 		</div>
 
-		<div class="panel-header">
-			<h4>Fill</h4>
-		</div>
-		<div class="section button-row">
-			<IconButton
-				icon="fillHachure"
-				title="Hachure"
-				active={selectedElements[0].fillStyle === 'hachure'}
-				size="small"
-				on:click={() => updateProperty('fillStyle', 'hachure')}
-			/>
-			<IconButton
-				icon="fillCrossHatch"
-				title="Cross Hatch"
-				active={selectedElements[0].fillStyle === 'cross-hatch'}
-				size="small"
-				on:click={() => updateProperty('fillStyle', 'cross-hatch')}
-			/>
-			<IconButton
-				icon="fillSolid"
-				title="Solid"
-				active={selectedElements[0].fillStyle === 'solid'}
-				size="small"
-				on:click={() => updateProperty('fillStyle', 'solid')}
-			/>
-		</div>
 
 		<div class="panel-header">
 			<h4>Opacity</h4>
@@ -271,10 +246,10 @@
 <style>
 	.properties-panel {
 		position: fixed;
-		left: 24px;
+		left: 20px;
 		top: 50%;
 		transform: translateY(-50%);
-		width: 260px;
+		width: 220px;
 		padding: 0;
 		background: rgba(255, 255, 255, 0.98);
 		border: 2px solid var(--color-border);
@@ -292,13 +267,13 @@
 	}
 
 	.panel-header {
-		padding: var(--spacing-lg) var(--spacing-lg) var(--spacing-md);
+		padding: var(--spacing-md) var(--spacing-md) var(--spacing-sm);
 		border-bottom: 2px solid var(--color-border);
 	}
 
 	.panel-header h4 {
 		margin: 0;
-		font-size: 11px;
+		font-size: 10px;
 		font-weight: 700;
 		color: var(--color-text-secondary);
 		text-transform: uppercase;
@@ -306,7 +281,7 @@
 	}
 
 	.section {
-		padding: var(--spacing-lg);
+		padding: var(--spacing-md);
 		border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 	}
 
@@ -331,7 +306,7 @@
 	.opacity-control {
 		display: flex;
 		flex-direction: column;
-		gap: var(--spacing-md);
+		gap: var(--spacing-sm);
 	}
 
 	.opacity-control input[type='range'] {
@@ -428,9 +403,9 @@
 	.checkbox-control {
 		display: flex;
 		align-items: center;
-		gap: var(--spacing-md);
+		gap: var(--spacing-sm);
 		cursor: pointer;
-		margin-bottom: var(--spacing-md);
+		margin-bottom: var(--spacing-sm);
 	}
 
 	.checkbox-control input[type='checkbox'] {
@@ -447,20 +422,20 @@
 	}
 
 	.shadow-controls {
-		margin-top: var(--spacing-lg);
-		display: flex;
-		flex-direction: column;
-		gap: var(--spacing-lg);
-	}
-
-	.control-group {
+		margin-top: var(--spacing-md);
 		display: flex;
 		flex-direction: column;
 		gap: var(--spacing-sm);
 	}
 
+	.control-group {
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-xs);
+	}
+
 	.control-group label {
-		font-size: 11px;
+		font-size: 10px;
 		font-weight: 600;
 		color: var(--color-text-secondary);
 		text-transform: uppercase;

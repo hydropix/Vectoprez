@@ -6,12 +6,12 @@ export const COLOR_INDICES = {
   DEFAULT: 0,
   CREAM: 1,
   NAVY: 2,
-  TEAL: 3,
-  BEIGE: 4,
-  BROWN: 5,
-  CORAL: 6,
-  MAGENTA: 7,
-  LIME: 8,
+  BEIGE: 3,
+  CORAL: 4,
+  LIME: 5,
+  PURPLE: 6,
+  ORANGE: 7,
+  MINT: 8,
   TRANSPARENT: -1,
 } as const;
 
@@ -19,24 +19,24 @@ const LIGHT_THEME_LUT: string[] = [
   '#2d2d2d',
   '#ffffff',
   '#1F92AF',
-  '#2eb8b8',
   '#e6a84e',
-  '#CA7F58',
   '#D35869',
-  '#d4478f',
   '#7cb342',
+  '#9c27b0',
+  '#ff6f00',
+  '#26a69a',
 ];
 
 const DARK_THEME_LUT: string[] = [
   '#f5f5f5',
   '#9ca3af',
   '#4FC3F7',
-  '#63D8E2',
   '#FFD54F',
-  '#FFAB91',
   '#FF7597',
-  '#E85D9A',
   '#A8D96F',
+  '#ce93d8',
+  '#ffb74d',
+  '#4db6ac',
 ];
 
 export function getColorFromIndex(index: ColorIndex, theme: Theme): string {
@@ -62,11 +62,11 @@ export function getAllColorIndices(): ColorIndex[] {
     COLOR_INDICES.DEFAULT,
     COLOR_INDICES.CREAM,
     COLOR_INDICES.NAVY,
-    COLOR_INDICES.TEAL,
     COLOR_INDICES.BEIGE,
-    COLOR_INDICES.BROWN,
     COLOR_INDICES.CORAL,
-    COLOR_INDICES.MAGENTA,
     COLOR_INDICES.LIME,
+    COLOR_INDICES.PURPLE,
+    COLOR_INDICES.ORANGE,
+    COLOR_INDICES.MINT,
   ];
 }

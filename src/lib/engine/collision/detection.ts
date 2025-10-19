@@ -1,37 +1,6 @@
 import type { AnyExcalidrawElement, Point, ArrowElement } from '../elements/types';
+import { distanceToLineSegment } from '$lib/utils/geometry';
 
-/**
- * Teste si un point est proche d'une ligne (distance point-segment)
- */
-function distanceToLineSegment(
-  point: Point,
-  lineStart: Point,
-  lineEnd: Point
-): number {
-  const dx = lineEnd.x - lineStart.x;
-  const dy = lineEnd.y - lineStart.y;
-  const lengthSquared = dx * dx + dy * dy;
-
-  if (lengthSquared === 0) {
-    // Les deux points sont identiques
-    const px = point.x - lineStart.x;
-    const py = point.y - lineStart.y;
-    return Math.sqrt(px * px + py * py);
-  }
-
-  // Projection du point sur la ligne
-  let t = ((point.x - lineStart.x) * dx + (point.y - lineStart.y) * dy) / lengthSquared;
-  t = Math.max(0, Math.min(1, t)); // Clamper entre 0 et 1
-
-  // Point le plus proche sur le segment
-  const closestX = lineStart.x + t * dx;
-  const closestY = lineStart.y + t * dy;
-
-  // Distance
-  const distX = point.x - closestX;
-  const distY = point.y - closestY;
-  return Math.sqrt(distX * distX + distY * distY);
-}
 
 /**
  * Teste si un point est sur une courbe de Bézier quadratique
