@@ -44,6 +44,7 @@
   import { renderContainerPreview, renderHierarchyIndicator, createAnimationState, getAnimationProgress, isAnimationComplete, type AnimationState } from '../engine/container/feedback';
   import type { Bounds } from '../engine/container/autoResize';
   import { isValidContainerType } from '../engine/container/detection';
+  import { updateTextDimensions, shouldDeleteEmptyText } from '../engine/text/editing';
 
   let canvasEl: HTMLCanvasElement;
   let ctx: CanvasRenderingContext2D | null = null;
@@ -889,30 +890,25 @@
   }
 
   function handleDoubleClick(worldPos: Point) {
-    // Vérifier d'abord si on double-clique sur un texte pour l'éditer
     const hitElement = getElementAtPosition($elements, worldPos);
+
     if (hitElement && hitElement.type === 'text') {
       startTextEditing(hitElement as TextElement);
       return;
     }
 
-    // Si on double-clique sur un élément sélectionné, ouvrir le panneau Properties
     const selectedIds = Array.from($appState.selectedElementIds);
     if (hitElement && selectedIds.includes(hitElement.id)) {
       appState.update(s => ({ ...s, isPropertiesPanelOpen: true }));
     }
-
-    // Double-clic sur une flèche sélectionnée: convertir en courbe ou supprimer point de contrôle
 
     for (const id of selectedIds) {
       const element = $elements.find(el => el.id === id);
       if (element && element.type === 'arrow') {
         const arrow = element as ArrowElement;
 
-        // Vérifier si on a cliqué sur un handle intermédiaire
         const handle = getHandleAtPosition(arrow, worldPos, $appState.zoom);
         if (handle && handle.type === 'mid') {
-          // Supprimer le point de contrôle
           let updatedArrow = removeControlPoint(arrow, handle.pointIndex);
           updatedArrow = updateArrowBoundingBox(updatedArrow);
           updateElement(arrow.id, updatedArrow as any);
@@ -920,7 +916,6 @@
           return;
         }
 
-        // Sinon, si c'est une ligne droite, la convertir en courbe
         if (arrow.points.length === 2) {
           let updatedArrow = addControlPoint(arrow);
           updatedArrow = updateArrowBoundingBox(updatedArrow);
@@ -929,6 +924,30 @@
           return;
         }
       }
+    }
+
+    if (!hitElement) {
+      const fontSize = 20;
+      const estimatedWidth = 100;
+      const estimatedHeight = fontSize * 1.2;
+
+      const baseText = createElement('text', worldPos.x, worldPos.y, estimatedWidth, estimatedHeight, {
+        strokeColorIndex: $appState.currentStrokeColorIndex,
+        opacity: $appState.currentOpacity,
+      }) as TextElement;
+
+      const newText: TextElement = {
+        ...baseText,
+        text: '',
+        fontSize,
+        fontFamily: 'Virgil, Segoe UI Emoji',
+        textAlign: 'left',
+        verticalAlign: 'top',
+      };
+
+      addElement(newText);
+      startTextEditing(newText);
+      history.record($elements);
     }
   }
 
@@ -1067,27 +1086,21 @@
     const textarea = e.target as HTMLTextAreaElement;
     const text = textarea.value;
 
-    // Mesurer le texte pour ajuster les dimensions
-    ctx.save();
-    ctx.font = `${editingTextElement.fontSize}px ${editingTextElement.fontFamily}`;
-    const lines = text.split('\n');
-    let maxWidth = 0;
-    for (const line of lines) {
-      const metrics = ctx.measureText(line);
-      maxWidth = Math.max(maxWidth, metrics.width);
-    }
-    const textHeight = editingTextElement.fontSize * 1.2 * Math.max(1, lines.length);
-    ctx.restore();
+    const dimensions = updateTextDimensions(
+      text,
+      editingTextElement.fontSize,
+      editingTextElement.fontFamily,
+      ctx
+    );
 
     const updatedText: Partial<TextElement> = {
       text,
-      width: Math.max(100, maxWidth + 10),
-      height: textHeight,
+      width: dimensions.width,
+      height: dimensions.height,
     };
 
     updateElement(editingTextElement.id, updatedText as any);
 
-    // Mettre à jour editingTextElement pour rester synchronisé
     const updated = $elements.find(el => el.id === editingTextElement!.id);
     if (updated && updated.type === 'text') {
       editingTextElement = updated as TextElement;
@@ -1097,8 +1110,7 @@
   function finishTextEditing() {
     if (!editingTextElement) return;
 
-    // Si le texte est vide, supprimer l'élément
-    if (editingTextElement.text.trim() === '') {
+    if (shouldDeleteEmptyText(editingTextElement.text)) {
       elements.update(els => els.filter(el => el.id !== editingTextElement!.id));
     }
 
@@ -1106,7 +1118,6 @@
     editingTextElement = null;
     textInputElement = null;
 
-    // Revenir à l'outil de sélection
     appState.update(s => ({ ...s, activeTool: 'selection' }));
   }
 
@@ -1146,11 +1157,12 @@
       font-family: {editingTextElement.fontFamily};
       color: {getColorFromIndex(editingTextElement.strokeColorIndex, $appState.theme)};
       background: transparent;
-      border: 2px solid #4dabf7;
+      border: none;
       outline: none;
       resize: none;
       overflow: hidden;
-      padding: 2px;
+      padding: 0;
+      white-space: pre-wrap;
       z-index: 1000;
     "
   />

@@ -8,6 +8,13 @@ export function setupKeyboardShortcuts() {
 }
 
 function handleKeyDown(e: KeyboardEvent) {
+  const target = e.target as HTMLElement;
+  const isEditingText = target.tagName === 'TEXTAREA' || target.tagName === 'INPUT';
+
+  if (isEditingText) {
+    return;
+  }
+
   const state = get(appState);
 
   if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
