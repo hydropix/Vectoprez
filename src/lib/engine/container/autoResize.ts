@@ -1,6 +1,6 @@
 import type { AnyExcalidrawElement, ExcalidrawElement } from '../elements/types';
 import { CONTAINER_PADDING } from './constants';
-import { isValidContainerType, shouldDetachFromContainer } from './detection';
+import { isValidContainerType } from './detection';
 
 export interface Bounds {
   x: number;
@@ -124,45 +124,18 @@ export function updateContainerBounds(
   }
 
   const containerElement = container as ExcalidrawElement;
-  let children = elements.filter(el => el.parentId === containerId);
-
-  let updatedElements = elements;
-  const childrenToDetach: string[] = [];
-
-  for (const child of children) {
-    if (shouldDetachFromContainer(child, containerElement)) {
-      childrenToDetach.push(child.id);
-    }
-  }
-
-  if (childrenToDetach.length > 0) {
-    updatedElements = updatedElements.map(el => {
-      if (childrenToDetach.includes(el.id)) {
-        return { ...el, parentId: null };
-      }
-      if (el.id === containerId && isValidContainerType(el)) {
-        const cont = el as ExcalidrawElement;
-        return {
-          ...cont,
-          childrenIds: cont.childrenIds.filter(id => !childrenToDetach.includes(id))
-        };
-      }
-      return el;
-    });
-
-    children = children.filter(child => !childrenToDetach.includes(child.id));
-  }
+  const children = elements.filter(el => el.parentId === containerId);
 
   if (children.length === 0 && containerElement.isExpanded) {
     const shrinkUpdate = shrinkContainer(containerElement);
-    return updatedElements.map(el => el.id === containerId ? { ...el, ...shrinkUpdate } as AnyExcalidrawElement : el);
+    return elements.map(el => el.id === containerId ? { ...el, ...shrinkUpdate } as AnyExcalidrawElement : el);
   }
 
   if (children.length > 0) {
     const requiredBounds = calculateRequiredBounds(containerElement, children);
     const expandUpdate = expandContainer(containerElement, requiredBounds);
-    return updatedElements.map(el => el.id === containerId ? { ...el, ...expandUpdate } as AnyExcalidrawElement : el);
+    return elements.map(el => el.id === containerId ? { ...el, ...expandUpdate } as AnyExcalidrawElement : el);
   }
 
-  return updatedElements;
+  return elements;
 }

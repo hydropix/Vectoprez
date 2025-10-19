@@ -1,3 +1,4 @@
+import { writable, derived } from 'svelte/store';
 import type { AnyExcalidrawElement } from '../elements/types';
 import { MAX_HISTORY } from '$lib/constants';
 
@@ -5,9 +6,22 @@ interface HistoryEntry {
   elements: AnyExcalidrawElement[];
 }
 
+interface HistoryState {
+  pastLength: number;
+  futureLength: number;
+}
+
 class History {
   private past: HistoryEntry[] = [];
   private future: HistoryEntry[] = [];
+  private state = writable<HistoryState>({ pastLength: 0, futureLength: 0 });
+
+  private updateState() {
+    this.state.set({
+      pastLength: this.past.length,
+      futureLength: this.future.length,
+    });
+  }
 
   record(elements: AnyExcalidrawElement[]) {
     const entry: HistoryEntry = {
@@ -20,6 +34,7 @@ class History {
     }
 
     this.future = [];
+    this.updateState();
   }
 
   undo(): AnyExcalidrawElement[] | null {
@@ -28,6 +43,7 @@ class History {
 
     this.future.push(entry);
     const previous = this.past[this.past.length - 1];
+    this.updateState();
     return previous ? previous.elements : [];
   }
 
@@ -36,6 +52,7 @@ class History {
     if (!entry) return null;
 
     this.past.push(entry);
+    this.updateState();
     return entry.elements;
   }
 
@@ -50,7 +67,15 @@ class History {
   clear() {
     this.past = [];
     this.future = [];
+    this.updateState();
+  }
+
+  getState() {
+    return this.state;
   }
 }
 
 export const history = new History();
+
+export const canUndo = derived(history.getState(), ($state) => $state.pastLength > 1);
+export const canRedo = derived(history.getState(), ($state) => $state.futureLength > 0);

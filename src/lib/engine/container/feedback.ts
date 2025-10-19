@@ -99,6 +99,15 @@ export function renderContainerPreview(
   const interpolated = interpolateBounds(currentBounds, targetBounds, progress);
 
   ctx.save();
+
+  if (container.angle !== 0) {
+    const centerX = interpolated.x + interpolated.width / 2;
+    const centerY = interpolated.y + interpolated.height / 2;
+    ctx.translate(centerX, centerY);
+    ctx.rotate(container.angle);
+    ctx.translate(-centerX, -centerY);
+  }
+
   ctx.strokeStyle = PREVIEW_STROKE_COLOR;
   ctx.fillStyle = PREVIEW_FILL_COLOR;
   ctx.lineWidth = 2;
@@ -121,11 +130,6 @@ export function renderHierarchyIndicator(
     return;
   }
 
-  ctx.save();
-  ctx.strokeStyle = CONTAINER_BORDER_COLOR;
-  ctx.lineWidth = 2.5 / zoom;
-  ctx.setLineDash([6 / zoom, 3 / zoom]);
-
   const padding = 4 / zoom;
   const bounds: Bounds = {
     x: element.x - padding,
@@ -133,6 +137,20 @@ export function renderHierarchyIndicator(
     width: element.width + padding * 2,
     height: element.height + padding * 2
   };
+
+  ctx.save();
+
+  if (element.angle !== 0) {
+    const centerX = bounds.x + bounds.width / 2;
+    const centerY = bounds.y + bounds.height / 2;
+    ctx.translate(centerX, centerY);
+    ctx.rotate(element.angle);
+    ctx.translate(-centerX, -centerY);
+  }
+
+  ctx.strokeStyle = CONTAINER_BORDER_COLOR;
+  ctx.lineWidth = 2.5 / zoom;
+  ctx.setLineDash([6 / zoom, 3 / zoom]);
 
   renderShape(ctx, element.type, bounds);
   ctx.stroke();
@@ -170,12 +188,6 @@ export function renderDropTargetHighlight(
     return;
   }
 
-  ctx.save();
-  ctx.strokeStyle = DROP_TARGET_COLOR;
-  ctx.fillStyle = DROP_TARGET_FILL;
-  ctx.lineWidth = DROP_TARGET_WIDTH / zoom;
-  ctx.setLineDash(DROP_TARGET_DASH.map(v => v / zoom));
-
   const padding = 8 / zoom;
   const bounds: Bounds = {
     x: container.x - padding,
@@ -183,6 +195,21 @@ export function renderDropTargetHighlight(
     width: container.width + padding * 2,
     height: container.height + padding * 2
   };
+
+  ctx.save();
+
+  if (container.angle !== 0) {
+    const centerX = bounds.x + bounds.width / 2;
+    const centerY = bounds.y + bounds.height / 2;
+    ctx.translate(centerX, centerY);
+    ctx.rotate(container.angle);
+    ctx.translate(-centerX, -centerY);
+  }
+
+  ctx.strokeStyle = DROP_TARGET_COLOR;
+  ctx.fillStyle = DROP_TARGET_FILL;
+  ctx.lineWidth = DROP_TARGET_WIDTH / zoom;
+  ctx.setLineDash(DROP_TARGET_DASH.map(v => v / zoom));
 
   renderShape(ctx, container.type, bounds);
   ctx.fill();
@@ -200,11 +227,6 @@ export function renderDetachIndicator(
     return;
   }
 
-  ctx.save();
-  ctx.strokeStyle = DETACH_INDICATOR_COLOR;
-  ctx.lineWidth = DETACH_INDICATOR_WIDTH / zoom;
-  ctx.setLineDash(DETACH_INDICATOR_DASH.map(v => v / zoom));
-
   const padding = 6 / zoom;
   const bounds: Bounds = {
     x: container.x - padding,
@@ -212,6 +234,20 @@ export function renderDetachIndicator(
     width: container.width + padding * 2,
     height: container.height + padding * 2
   };
+
+  ctx.save();
+
+  if (container.angle !== 0) {
+    const centerX = bounds.x + bounds.width / 2;
+    const centerY = bounds.y + bounds.height / 2;
+    ctx.translate(centerX, centerY);
+    ctx.rotate(container.angle);
+    ctx.translate(-centerX, -centerY);
+  }
+
+  ctx.strokeStyle = DETACH_INDICATOR_COLOR;
+  ctx.lineWidth = DETACH_INDICATOR_WIDTH / zoom;
+  ctx.setLineDash(DETACH_INDICATOR_DASH.map(v => v / zoom));
 
   renderShape(ctx, container.type, bounds);
   ctx.stroke();

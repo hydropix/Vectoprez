@@ -4,7 +4,7 @@
   import { elements } from '../stores/elements';
   import { exportToPNG, exportToJSON, downloadBlob, importFromJSON } from '../utils/export';
   import { applyTheme } from '$lib/utils/theme';
-  import { history } from '$lib/engine/history/undoRedo';
+  import { history, canUndo, canRedo } from '$lib/engine/history/undoRedo';
   import ConfirmModal from './ConfirmModal.svelte';
   import IconButton from './IconButton.svelte';
 
@@ -160,13 +160,13 @@
     <IconButton
       icon="undo"
       title="Undo (Ctrl+Z)"
-      disabled={!history.canUndo()}
+      disabled={!$canUndo}
       on:click={handleUndo}
     />
     <IconButton
       icon="redo"
       title="Redo (Ctrl+Y)"
-      disabled={!history.canRedo()}
+      disabled={!$canRedo}
       on:click={handleRedo}
     />
   </div>

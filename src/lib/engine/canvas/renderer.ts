@@ -297,7 +297,7 @@ function renderText(text: TextElement, ctx: CanvasRenderingContext2D, theme: The
   ctx.font = `${text.fontSize}px ${text.fontFamily}`;
   ctx.fillStyle = themedTextColor;
   ctx.textAlign = text.textAlign;
-  ctx.textBaseline = text.verticalAlign === 'top' ? 'top' : 'middle';
+  ctx.textBaseline = 'alphabetic';
   ctx.globalAlpha = text.opacity / 100;
 
   let x = text.x;
@@ -317,7 +317,7 @@ function renderText(text: TextElement, ctx: CanvasRenderingContext2D, theme: The
   const lineHeight = text.fontSize * 1.2;
 
   lines.forEach((line, index) => {
-    ctx.fillText(line, x, y + index * lineHeight);
+    ctx.fillText(line, x, y + index * lineHeight + text.fontSize);
   });
 
   ctx.restore();
