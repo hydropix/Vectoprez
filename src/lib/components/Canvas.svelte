@@ -8,19 +8,6 @@
   import { getElementAtPosition } from '../engine/collision/detection';
   import { history } from '../engine/history/undoRedo';
   import {
-    getBindableElementAtPosition,
-    calculateBinding,
-    updateBoundElements,
-    updateArrowBindingOffsets,
-  } from '../engine/binding/arrows';
-  import {
-    getBindableElementForText,
-    calculateTextBinding,
-    updateBoundTextElements,
-    getTextBindingPosition,
-    updateTextBindingOffset,
-  } from '../engine/binding/text';
-  import {
     getHandleAtPosition,
     renderArrowHandles,
     type ArrowHandle,
@@ -51,6 +38,12 @@
     getElementsInSelectionBox,
     renderSelectionBox,
   } from '../engine/selection/selectionBox';
+  import { updateHierarchy, finalizeHierarchyChange } from '../engine/container/hierarchy';
+  import { moveWithChildren } from '../engine/container/transform';
+  import { updateContainerBounds, calculateRequiredBounds } from '../engine/container/autoResize';
+  import { renderContainerPreview, renderHierarchyIndicator, createAnimationState, getAnimationProgress, isAnimationComplete, type AnimationState } from '../engine/container/feedback';
+  import type { Bounds } from '../engine/container/autoResize';
+  import { isValidContainerType } from '../engine/container/detection';
 
   let canvasEl: HTMLCanvasElement;
   let ctx: CanvasRenderingContext2D | null = null;
@@ -64,6 +57,7 @@
   let currentElementId: string | null = null;
   let draggedElement: AnyExcalidrawElement | null = null;
   let dragOffset: Point = { x: 0, y: 0 };
+  let lastDraggedElementPos: Point | null = null;
   let draggedHandle: ArrowHandle | null = null;
   let draggedArrow: ArrowElement | null = null;
   let draggedLineHandle: LineHandle | null = null;
@@ -91,6 +85,10 @@
   let isOverHandle = false;
   let isOverTransformHandle = false;
   let hoverTransformHandleType: TransformHandle | null = null;
+  let potentialContainer: ExcalidrawElement | null = null;
+  let shouldDetach = false;
+  let containerAnimations: Map<string, AnimationState> = new Map();
+  let previewBounds: Bounds | null = null;
 
   $: if ($appState.theme) {
     const bgColor = $appState.theme === 'light' ? '#ff9f93' : '#171923';
@@ -174,10 +172,36 @@
       theme: $appState.theme,
     });
 
-    // Render hover feedback avant la sélection
+    ctx.save();
+    ctx.translate($appState.scrollX, $appState.scrollY);
+    ctx.scale($appState.zoom, $appState.zoom);
+
+    for (const element of $elements) {
+      if (isValidContainerType(element)) {
+        renderHierarchyIndicator(ctx, element as ExcalidrawElement, $appState.theme, $appState.zoom);
+      }
+    }
+
+    if (potentialContainer && previewBounds) {
+      renderContainerPreview(ctx, potentialContainer, previewBounds, 1);
+    }
+
+    for (const [containerId, animation] of containerAnimations.entries()) {
+      const container = $elements.find(el => el.id === containerId);
+      if (container && isValidContainerType(container)) {
+        const progress = getAnimationProgress(animation);
+        renderContainerPreview(ctx, container as ExcalidrawElement, animation.endBounds, progress);
+
+        if (isAnimationComplete(animation)) {
+          containerAnimations.delete(containerId);
+        }
+      }
+    }
+
+    ctx.restore();
+
     renderHoverFeedback(ctx);
 
-    // Render selection handles si sélection active
     renderSelection(ctx);
 
     requestAnimationFrame(render);
@@ -495,6 +519,7 @@
             } else {
               isDragging = true;
               draggedElement = hitElement;
+              lastDraggedElementPos = { x: hitElement.x, y: hitElement.y };
               dragOffset = {
                 x: worldPos.x - hitElement.x,
                 y: worldPos.y - hitElement.y,
@@ -545,11 +570,6 @@
       isDrawing = true;
       drawStart = worldPos;
 
-      const startBindingElement = getBindableElementAtPosition($elements, worldPos);
-      const startBinding = startBindingElement
-        ? calculateBinding(worldPos, startBindingElement)
-        : null;
-
       const baseArrow = createElement('arrow', worldPos.x, worldPos.y, 0, 0, {
         strokeColorIndex: $appState.currentStrokeColorIndex,
         strokeWidth: $appState.currentStrokeWidth,
@@ -562,23 +582,12 @@
           { x: 0, y: 0 },
           { x: 0, y: 0 },
         ],
-        startBinding,
-        endBinding: null,
         startArrowhead: null,
         endArrowhead: 'arrow',
       } as ArrowElement;
 
       addElement(newArrow);
       currentElementId = newArrow.id;
-
-      if (startBinding && startBindingElement && 'boundElements' in startBindingElement) {
-        updateElement(startBindingElement.id, {
-          boundElements: [
-            ...startBindingElement.boundElements,
-            { id: newArrow.id, type: 'arrow' },
-          ],
-        } as any);
-      }
 
       history.record($elements);
     } else if ($appState.activeTool === 'text') {
@@ -587,11 +596,6 @@
       const fontSize = 20;
       const estimatedWidth = 100;
       const estimatedHeight = fontSize * 1.2;
-
-      const bindingElement = getBindableElementForText($elements, worldPos);
-      const textBinding = bindingElement
-        ? calculateTextBinding(worldPos, bindingElement, estimatedWidth, estimatedHeight)
-        : null;
 
       const baseText = createElement('text', worldPos.x, worldPos.y, estimatedWidth, estimatedHeight, {
         strokeColorIndex: $appState.currentStrokeColorIndex,
@@ -605,23 +609,7 @@
         fontFamily: 'Virgil, Segoe UI Emoji',
         textAlign: 'left',
         verticalAlign: 'top',
-        binding: textBinding,
       };
-
-      if (textBinding && bindingElement) {
-        const position = getTextBindingPosition(textBinding, bindingElement, estimatedWidth, estimatedHeight);
-        newText.x = position.x;
-        newText.y = position.y;
-
-        if ('boundElements' in bindingElement) {
-          updateElement(bindingElement.id, {
-            boundElements: [
-              ...bindingElement.boundElements,
-              { id: newText.id, type: 'text' },
-            ],
-          } as any);
-        }
-      }
 
       addElement(newText);
       startTextEditing(newText);
@@ -699,13 +687,6 @@
       for (const update of updates) {
         updateElement(update.id!, update as any);
       }
-
-      let updatedEls = $elements;
-      for (const orig of originalGroupElements) {
-        updatedEls = updateBoundElements(updatedEls, orig.id);
-        updatedEls = updateBoundTextElements(updatedEls, orig.id, ctx!);
-      }
-      elements.set(updatedEls);
     } else if (isDraggingGroupHandle && draggedGroupHandle && groupTransformStart && originalGroupBounds) {
       if (draggedGroupHandle.type === 'rotate') {
         const angleDelta = calculateRotation(
@@ -725,13 +706,6 @@
         for (const update of updates) {
           updateElement(update.id!, update as any);
         }
-
-        let updatedEls = $elements;
-        for (const orig of originalGroupElements) {
-          updatedEls = updateBoundElements(updatedEls, orig.id);
-          updatedEls = updateBoundTextElements(updatedEls, orig.id, ctx!);
-        }
-        elements.set(updatedEls);
       } else {
         const dx = worldPos.x - groupTransformStart.x;
         const dy = worldPos.y - groupTransformStart.y;
@@ -764,13 +738,6 @@
         for (const update of updates) {
           updateElement(update.id!, update as any);
         }
-
-        let updatedEls = $elements;
-        for (const orig of originalGroupElements) {
-          updatedEls = updateBoundElements(updatedEls, orig.id);
-          updatedEls = updateBoundTextElements(updatedEls, orig.id, ctx!);
-        }
-        elements.set(updatedEls);
       }
     } else if (isPanning) {
       const dx = e.clientX - lastMousePos.x;
@@ -802,11 +769,6 @@
           );
 
           updateElement(elementId, resizeResult as any);
-
-          // Update bound elements if needed
-          let updatedElements = updateBoundElements($elements, elementId);
-          updatedElements = updateBoundTextElements(updatedElements, elementId, ctx!);
-          elements.set(updatedElements);
         }
       }
     } else if (isDraggingHandle && draggedHandle && draggedArrow) {
@@ -819,68 +781,8 @@
       const relativeY = worldPos.y - draggedArrow.y;
       newPoints[pointIndex] = { x: relativeX, y: relativeY };
 
-      // Vérifier s'il y a un nouveau binding
-      let newBinding = null;
-      let boundElement = null;
-
-      if (draggedHandle.type === 'start' || draggedHandle.type === 'end') {
-        boundElement = getBindableElementAtPosition($elements, worldPos, draggedArrow.id);
-        if (boundElement) {
-          // Toujours recalculer l'offset pour capturer la nouvelle position
-          newBinding = calculateBinding(worldPos, boundElement, true);
-        }
-      }
-
-      // Mettre à jour la flèche
       const updates: any = { points: newPoints };
 
-      if (draggedHandle.type === 'start') {
-        updates.startBinding = newBinding;
-
-        // Nettoyer l'ancien binding
-        if (draggedArrow.startBinding && !newBinding && draggedArrow) {
-          const oldElement = $elements.find(el => el.id === draggedArrow!.startBinding!.elementId);
-          if (oldElement && oldElement.type !== 'arrow' && 'boundElements' in oldElement) {
-            updateElement(oldElement.id, {
-              boundElements: oldElement.boundElements.filter(b => b.id !== draggedArrow!.id),
-            } as any);
-          }
-        }
-
-        // Ajouter le nouveau binding
-        if (newBinding && boundElement && 'boundElements' in boundElement) {
-          const alreadyBound = boundElement.boundElements.some(b => b.id === draggedArrow!.id);
-          if (!alreadyBound) {
-            updateElement(boundElement.id, {
-              boundElements: [...boundElement.boundElements, { id: draggedArrow!.id, type: 'arrow' }],
-            } as any);
-          }
-        }
-      } else if (draggedHandle.type === 'end') {
-        updates.endBinding = newBinding;
-
-        // Nettoyer l'ancien binding
-        if (draggedArrow.endBinding && !newBinding && draggedArrow) {
-          const oldElement = $elements.find(el => el.id === draggedArrow!.endBinding!.elementId);
-          if (oldElement && oldElement.type !== 'arrow' && 'boundElements' in oldElement) {
-            updateElement(oldElement.id, {
-              boundElements: oldElement.boundElements.filter(b => b.id !== draggedArrow!.id),
-            } as any);
-          }
-        }
-
-        // Ajouter le nouveau binding
-        if (newBinding && boundElement && 'boundElements' in boundElement) {
-          const alreadyBound = boundElement.boundElements.some(b => b.id === draggedArrow!.id);
-          if (!alreadyBound) {
-            updateElement(boundElement.id, {
-              boundElements: [...boundElement.boundElements, { id: draggedArrow!.id, type: 'arrow' }],
-            } as any);
-          }
-        }
-      }
-
-      // Mettre à jour et recalculer le bounding box
       let updatedArrow = { ...draggedArrow, ...updates } as ArrowElement;
       updatedArrow = updateArrowBoundingBox(updatedArrow);
 
@@ -920,57 +822,57 @@
       if (freshLine && freshLine.type === 'line') {
         draggedLine = freshLine as ExcalidrawElement;
       }
-    } else if (isDragging && draggedElement) {
-      // Déplacer l'élément
+    } else if (isDragging && draggedElement && lastDraggedElementPos) {
       const newX = worldPos.x - dragOffset.x;
       const newY = worldPos.y - dragOffset.y;
+      const dx = newX - lastDraggedElementPos.x;
+      const dy = newY - lastDraggedElementPos.y;
 
-      updateElement(draggedElement.id, { x: newX, y: newY } as any);
+      const hasChildren = isValidContainerType(draggedElement) &&
+        (draggedElement as ExcalidrawElement).childrenIds.length > 0;
 
-      // Mettre à jour les arrows et textes liés
-      let updatedElements = updateBoundElements($elements, draggedElement.id);
-      updatedElements = updateBoundTextElements(updatedElements, draggedElement.id, ctx!);
+      let updatedElements: AnyExcalidrawElement[];
+      if (hasChildren) {
+        updatedElements = moveWithChildren(draggedElement!.id, dx, dy, $elements);
+        lastDraggedElementPos = { x: newX, y: newY };
+      } else {
+        updatedElements = $elements.map(el =>
+          el.id === draggedElement!.id
+            ? { ...el, x: newX, y: newY }
+            : el
+        );
+      }
+
       elements.set(updatedElements);
+
+      const hierarchyUpdate = updateHierarchy(draggedElement!.id, worldPos, updatedElements);
+      potentialContainer = hierarchyUpdate.potentialContainer;
+      shouldDetach = hierarchyUpdate.shouldDetach;
+
+      if (potentialContainer) {
+        const tempElement = updatedElements.find(el => el.id === draggedElement!.id)!;
+        const children = [tempElement];
+        previewBounds = calculateRequiredBounds(potentialContainer, children);
+      } else {
+        previewBounds = null;
+      }
     } else if (isDrawing && drawStart && currentElementId) {
       if ($appState.activeTool === 'arrow') {
-        // Redimensionner la flèche en cours de création
         const arrow = $elements.find(el => el.id === currentElementId);
         if (!arrow || arrow.type !== 'arrow') return;
 
         const dx = worldPos.x - drawStart.x;
         const dy = worldPos.y - drawStart.y;
 
-        // Vérifier binding à la fin
-        const endBindingElement = getBindableElementAtPosition($elements, worldPos, currentElementId);
-        const endBinding = endBindingElement
-          ? calculateBinding(worldPos, endBindingElement)
-          : null;
-
-        // Mettre à jour SANS recalculer le bounding box pendant la création
-        // Le bounding box sera recalculé à la fin (mouseUp) pour éviter que la flèche "parte au loin"
         const tempArrow = {
           ...arrow,
           points: [
             { x: 0, y: 0 },
             { x: dx, y: dy },
           ],
-          endBinding,
         } as ArrowElement;
 
         updateElement(currentElementId, tempArrow as any);
-
-        // Mettre à jour boundElements si le binding a changé
-        if (endBinding && endBindingElement && 'boundElements' in endBindingElement) {
-          const alreadyBound = endBindingElement.boundElements.some(b => b.id === currentElementId);
-          if (!alreadyBound) {
-            updateElement(endBindingElement.id, {
-              boundElements: [
-                ...endBindingElement.boundElements,
-                { id: currentElementId, type: 'arrow' },
-              ],
-            } as any);
-          }
-        }
       } else {
         // Redimensionner l'élément en cours de création
         const width = worldPos.x - drawStart.x;
@@ -1054,23 +956,64 @@
       }
     }
 
-    if (isDragging && draggedElement && draggedElement.type === 'text') {
-      const textEl = draggedElement as TextElement;
-      if (textEl.binding) {
-        const boundElement = $elements.find(el => el.id === textEl.binding!.elementId);
-        if (boundElement && boundElement.type !== 'arrow' && boundElement.type !== 'text') {
-          const updatedText = updateTextBindingOffset(textEl, boundElement as ExcalidrawElement, ctx!);
-          updateElement(textEl.id, updatedText as any);
+    if (isDragging && draggedElement) {
+      let updatedElements = finalizeHierarchyChange(
+        draggedElement.id,
+        potentialContainer,
+        shouldDetach,
+        $elements
+      );
+
+      if (potentialContainer || shouldDetach) {
+        if (potentialContainer) {
+          updatedElements = updateContainerBounds(potentialContainer!.id, updatedElements);
+
+          const container = updatedElements.find(el => el.id === potentialContainer!.id);
+          if (container && isValidContainerType(container)) {
+            const startBounds: Bounds = {
+              x: potentialContainer.x,
+              y: potentialContainer.y,
+              width: potentialContainer.width,
+              height: potentialContainer.height
+            };
+            const endBounds: Bounds = {
+              x: (container as ExcalidrawElement).x,
+              y: (container as ExcalidrawElement).y,
+              width: (container as ExcalidrawElement).width,
+              height: (container as ExcalidrawElement).height
+            };
+            containerAnimations.set(potentialContainer.id, createAnimationState(startBounds, endBounds));
+          }
+        }
+
+        if (shouldDetach && draggedElement.parentId) {
+          const oldParentId = draggedElement.parentId;
+          updatedElements = updateContainerBounds(oldParentId, updatedElements);
+
+          const oldParent = updatedElements.find(el => el.id === oldParentId);
+          if (oldParent && isValidContainerType(oldParent)) {
+            const startBounds: Bounds = {
+              x: oldParent.x,
+              y: oldParent.y,
+              width: oldParent.width,
+              height: oldParent.height
+            };
+            const endBounds: Bounds = {
+              x: oldParent.x,
+              y: oldParent.y,
+              width: (oldParent as ExcalidrawElement).originalBounds?.width ?? oldParent.width,
+              height: (oldParent as ExcalidrawElement).originalBounds?.height ?? oldParent.height
+            };
+            containerAnimations.set(oldParentId, createAnimationState(startBounds, endBounds));
+          }
         }
       }
-    }
 
-    if (isDragging && draggedElement && draggedElement.type === 'arrow') {
-      const arrowEl = draggedElement as ArrowElement;
-      if (arrowEl.startBinding || arrowEl.endBinding) {
-        const updatedArrow = updateArrowBindingOffsets(arrowEl, $elements);
-        updateElement(arrowEl.id, updatedArrow as any);
-      }
+      elements.set(updatedElements);
+
+      potentialContainer = null;
+      shouldDetach = false;
+      previewBounds = null;
     }
 
     if (isDrawing || isDraggingHandle || isDragging || isDraggingTransformHandle || isDraggingGroup || isDraggingGroupHandle) {
@@ -1088,6 +1031,7 @@
     drawStart = null;
     currentElementId = null;
     draggedElement = null;
+    lastDraggedElementPos = null;
     draggedHandle = null;
     draggedArrow = null;
     draggedLineHandle = null;
@@ -1135,27 +1079,11 @@
     const textHeight = editingTextElement.fontSize * 1.2 * Math.max(1, lines.length);
     ctx.restore();
 
-    // Mettre à jour l'élément texte
     const updatedText: Partial<TextElement> = {
       text,
       width: Math.max(100, maxWidth + 10),
       height: textHeight,
     };
-
-    // Si binding, recalculer la position
-    if (editingTextElement.binding) {
-      const boundElement = $elements.find(el => el.id === editingTextElement!.binding!.elementId);
-      if (boundElement && boundElement.type !== 'arrow' && boundElement.type !== 'text') {
-        const position = getTextBindingPosition(
-          editingTextElement.binding,
-          boundElement,
-          updatedText.width!,
-          updatedText.height!
-        );
-        updatedText.x = position.x;
-        updatedText.y = position.y;
-      }
-    }
 
     updateElement(editingTextElement.id, updatedText as any);
 

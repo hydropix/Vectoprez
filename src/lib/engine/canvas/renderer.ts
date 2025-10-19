@@ -289,13 +289,5 @@ function renderText(text: TextElement, ctx: CanvasRenderingContext2D, theme: The
     ctx.fillText(line, x, y + index * lineHeight);
   });
 
-  if (text.binding) {
-    ctx.strokeStyle = '#4dabf7';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([5, 5]);
-    ctx.strokeRect(text.x - 2, text.y - 2, text.width + 4, text.height + 4);
-    ctx.setLineDash([]);
-  }
-
   ctx.restore();
 }

@@ -21,19 +21,6 @@ export interface Point {
   y: number;
 }
 
-export interface Binding {
-  elementId: string;  // ID de l'élément lié
-  focus: number;      // Position sur le périmètre (-1 à 1)
-  gap: number;        // Espace entre flèche et shape
-  offset?: { x: number; y: number };  // Offset personnalisé par rapport au point calculé
-}
-
-export interface TextBinding {
-  elementId: string;  // ID de l'élément lié
-  position: 'top' | 'bottom' | 'left' | 'right' | 'center';  // Position relative à l'élément
-  offset?: { x: number; y: number };  // Offset optionnel
-}
-
 export interface BaseElement {
   id: string;
   x: number;
@@ -50,11 +37,14 @@ export interface BaseElement {
   opacity: number; // 0-100
   locked: boolean;
   seed: number; // Pour Rough.js consistency
+  parentId: string | null;
+  originalBounds: { width: number; height: number } | null;
 }
 
 export interface ExcalidrawElement extends BaseElement {
   type: 'rectangle' | 'ellipse' | 'line';
-  boundElements: { id: string; type: 'arrow' | 'text' }[];
+  childrenIds: string[];
+  isExpanded: boolean;
 }
 
 export interface TextElement extends BaseElement {
@@ -64,14 +54,11 @@ export interface TextElement extends BaseElement {
   fontFamily: string;
   textAlign: 'left' | 'center' | 'right';
   verticalAlign: 'top' | 'middle';
-  binding: TextBinding | null;  // Accrochage à un élément
 }
 
 export interface ArrowElement extends BaseElement {
   type: 'arrow';
   points: Point[];
-  startBinding: Binding | null;
-  endBinding: Binding | null;
   startArrowhead: 'arrow' | 'bar' | 'dot' | null;
   endArrowhead: 'arrow' | 'bar' | 'dot' | null;
 }

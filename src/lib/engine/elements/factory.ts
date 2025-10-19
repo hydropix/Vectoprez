@@ -26,6 +26,8 @@ export function createElement(
     opacity: options.opacity ?? 100,
     locked: options.locked ?? false,
     seed: Math.floor(Math.random() * 2 ** 31),
+    parentId: null,
+    originalBounds: null,
     ...options,
   };
 
@@ -45,13 +47,13 @@ export function createElement(
       fontFamily: 'Virgil, Segoe UI Emoji',
       textAlign: 'left',
       verticalAlign: 'top',
-      binding: null,
     } as TextElement;
   }
 
   return {
     ...base,
     type,
-    boundElements: [],
+    childrenIds: [],
+    isExpanded: false,
   } as ExcalidrawElement;
 }
