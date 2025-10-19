@@ -30,7 +30,7 @@
     renderGroupTransformHandles,
     getGroupHandleAtPosition,
   } from '../engine/transform/handles';
-  import { calculateResize, calculateRotation, snapRotation } from '../engine/transform/geometry';
+  import { calculateResize, calculateRotation, applyRotationSnapping } from '../engine/transform/geometry';
   import { getGroupBoundingBox, type GroupBounds } from '../engine/selection/groupBounds';
   import { translateGroup, scaleGroup, rotateGroup } from '../engine/selection/groupTransform';
   import {
@@ -771,7 +771,7 @@
           worldPos
         );
 
-        const snappedAngle = e.shiftKey ? snapRotation(angleDelta, true) : angleDelta;
+        const snappedAngle = applyRotationSnapping(angleDelta, e.shiftKey);
         const updates = rotateGroup(originalGroupElements, originalGroupBounds, snappedAngle);
 
         for (const update of updates) {
@@ -822,7 +822,7 @@
 
         if (draggedTransformHandle.type === 'rotate') {
           const newAngle = calculateRotation(transformOriginalElement, worldPos);
-          const snappedAngle = e.shiftKey ? snapRotation(newAngle, true) : newAngle;
+          const snappedAngle = applyRotationSnapping(newAngle, e.shiftKey);
 
           updateElement(elementId, {
             angle: snappedAngle,

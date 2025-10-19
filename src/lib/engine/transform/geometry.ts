@@ -143,6 +143,30 @@ export function snapRotation(angle: number, snapToGrid: boolean = false): number
 }
 
 /**
+ * Apply rotation snapping with automatic 90-degree snap and optional Shift snap
+ * - Automatically snaps to 90° when within 5° tolerance
+ * - When Shift is pressed, snaps to 15° increments
+ */
+export function applyRotationSnapping(angle: number, shiftPressed: boolean = false): number {
+  if (shiftPressed) {
+    const snapIncrement = (15 * Math.PI) / 180;
+    return Math.round(angle / snapIncrement) * snapIncrement;
+  }
+
+  const snap90Increment = (90 * Math.PI) / 180;
+  const tolerance = (5 * Math.PI) / 180;
+
+  const nearestSnap90 = Math.round(angle / snap90Increment) * snap90Increment;
+  const distanceToSnap = Math.abs(angle - nearestSnap90);
+
+  if (distanceToSnap <= tolerance) {
+    return nearestSnap90;
+  }
+
+  return angle;
+}
+
+/**
  * Transform a point by rotating it around a center
  */
 export function rotatePoint(point: Point, center: Point, angle: number): Point {
