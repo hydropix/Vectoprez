@@ -1,4 +1,5 @@
 import type { Point, ExcalidrawElement, TextElement } from '../elements/types';
+import type { GroupBounds } from '../selection/groupBounds';
 
 export type ResizeHandleType =
   | 'nw' // north-west (top-left)
@@ -234,4 +235,126 @@ export function getCursorForHandle(
   if (totalAngle >= 292.5 && totalAngle < 337.5) return 'nwse-resize';
 
   return 'default';
+}
+
+export function getGroupTransformHandles(
+  groupBounds: GroupBounds,
+  zoom: number
+): TransformHandle[] {
+  const handles: TransformHandle[] = [];
+  const { x, y, width, height } = groupBounds;
+
+  const margin = HANDLE_MARGIN / zoom;
+  const handlePositions: { type: ResizeHandleType; x: number; y: number }[] = [
+    { type: 'nw', x: x - margin, y: y - margin },
+    { type: 'ne', x: x + width + margin, y: y - margin },
+    { type: 'se', x: x + width + margin, y: y + height + margin },
+    { type: 'sw', x: x - margin, y: y + height + margin },
+  ];
+
+  for (const pos of handlePositions) {
+    handles.push({
+      type: pos.type,
+      position: { x: pos.x, y: pos.y },
+    });
+  }
+
+  const rotateHandleY = y - ROTATE_HANDLE_DISTANCE / zoom;
+  handles.push({
+    type: 'rotate',
+    position: { x: x + width / 2, y: rotateHandleY },
+  });
+
+  return handles;
+}
+
+export function getGroupHandleAtPosition(
+  groupBounds: GroupBounds,
+  point: Point,
+  zoom: number
+): TransformHandle | null {
+  const handles = getGroupTransformHandles(groupBounds, zoom);
+  const threshold = HANDLE_SIZE / zoom;
+
+  for (const handle of handles) {
+    const dx = point.x - handle.position.x;
+    const dy = point.y - handle.position.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (distance <= threshold) {
+      return handle;
+    }
+  }
+
+  return null;
+}
+
+export function renderGroupTransformHandles(
+  ctx: CanvasRenderingContext2D,
+  groupBounds: GroupBounds,
+  zoom: number
+) {
+  const handles = getGroupTransformHandles(groupBounds, zoom);
+  const { x, y, width, height } = groupBounds;
+
+  ctx.save();
+
+  const margin = HANDLE_MARGIN / zoom;
+
+  ctx.shadowColor = 'rgba(59, 130, 246, 0.3)';
+  ctx.shadowBlur = 8 / zoom;
+
+  ctx.strokeStyle = '#3b82f6';
+  ctx.lineWidth = 2 / zoom;
+  ctx.setLineDash([8 / zoom, 4 / zoom]);
+  ctx.strokeRect(x - margin, y - margin, width + margin * 2, height + margin * 2);
+  ctx.setLineDash([]);
+
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+
+  ctx.restore();
+
+  ctx.save();
+
+  for (const handle of handles) {
+    const { x: hx, y: hy } = handle.position;
+
+    if (handle.type === 'rotate') {
+      const topMiddleY = y - margin;
+      const topMiddleX = x + width / 2;
+
+      ctx.strokeStyle = '#3b82f6';
+      ctx.lineWidth = 1.5 / zoom;
+      ctx.beginPath();
+      ctx.moveTo(topMiddleX, topMiddleY);
+      ctx.lineTo(hx, hy);
+      ctx.stroke();
+
+      ctx.fillStyle = '#fff';
+      ctx.strokeStyle = '#3b82f6';
+      ctx.lineWidth = 2 / zoom;
+      ctx.beginPath();
+      ctx.arc(hx, hy, (HANDLE_SIZE + 2) / zoom, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.strokeStyle = '#3b82f6';
+      ctx.lineWidth = 1.5 / zoom;
+      ctx.beginPath();
+      ctx.arc(hx, hy, 4 / zoom, 0.2, Math.PI * 1.8);
+      ctx.stroke();
+    } else {
+      const size = HANDLE_SIZE / zoom;
+
+      ctx.fillStyle = '#fff';
+      ctx.strokeStyle = '#3b82f6';
+      ctx.lineWidth = 2 / zoom;
+
+      ctx.fillRect(hx - size / 2, hy - size / 2, size, size);
+      ctx.strokeRect(hx - size / 2, hy - size / 2, size, size);
+    }
+  }
+
+  ctx.restore();
 }

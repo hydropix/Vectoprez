@@ -10,14 +10,22 @@ export function setupKeyboardShortcuts() {
 function handleKeyDown(e: KeyboardEvent) {
   const state = get(appState);
 
-  // Outils
-  if (e.key === 'v' || e.key === '1') {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+    e.preventDefault();
+    const allElements = get(elements);
+    appState.update(s => ({
+      ...s,
+      selectedElementIds: new Set(allElements.map(el => el.id)),
+    }));
+  }
+
+  else if (e.key === 'v' || e.key === '1') {
     setTool('selection');
   } else if (e.key === 'r') {
     setTool('rectangle');
   } else if (e.key === 'o' || e.key === 'e') {
     setTool('ellipse');
-  } else if (e.key === 'a') {
+  } else if (e.key === 'a' && !e.ctrlKey && !e.metaKey) {
     setTool('arrow');
   } else if (e.key === 'h' || e.key === ' ') {
     e.preventDefault();

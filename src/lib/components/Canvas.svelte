@@ -40,8 +40,17 @@
     renderTransformHandles,
     getCursorForHandle,
     type TransformHandle,
+    renderGroupTransformHandles,
+    getGroupHandleAtPosition,
   } from '../engine/transform/handles';
   import { calculateResize, calculateRotation, snapRotation } from '../engine/transform/geometry';
+  import { getGroupBoundingBox, type GroupBounds } from '../engine/selection/groupBounds';
+  import { translateGroup, scaleGroup, rotateGroup } from '../engine/selection/groupTransform';
+  import {
+    normalizeSelectionBox,
+    getElementsInSelectionBox,
+    renderSelectionBox,
+  } from '../engine/selection/selectionBox';
 
   let canvasEl: HTMLCanvasElement;
   let ctx: CanvasRenderingContext2D | null = null;
@@ -62,6 +71,16 @@
   let draggedTransformHandle: TransformHandle | null = null;
   let transformStartPoint: Point | null = null;
   let transformOriginalElement: (ExcalidrawElement | TextElement) | null = null;
+  let isDrawingSelectionBox = false;
+  let selectionBoxStart: Point | null = null;
+  let selectionBoxCurrent: Point | null = null;
+  let isDraggingGroup = false;
+  let isDraggingGroupHandle = false;
+  let draggedGroupHandle: TransformHandle | null = null;
+  let groupTransformStart: Point | null = null;
+  let originalGroupElements: AnyExcalidrawElement[] = [];
+  let originalGroupBounds: GroupBounds | null = null;
+  let clickedGroupElement: AnyExcalidrawElement | null = null;
   let lastClickTime = 0;
   let lastClickPos: Point | null = null;
   let isEditingText = false;
@@ -195,6 +214,17 @@
   }
 
   function renderSelection(ctx: CanvasRenderingContext2D) {
+    ctx.save();
+    ctx.translate($appState.scrollX, $appState.scrollY);
+    ctx.scale($appState.zoom, $appState.zoom);
+
+    if (isDrawingSelectionBox && selectionBoxStart && selectionBoxCurrent) {
+      const box = normalizeSelectionBox(selectionBoxStart, selectionBoxCurrent);
+      renderSelectionBox(ctx, box, $appState.zoom);
+    }
+
+    ctx.restore();
+
     const selectedIds = Array.from($appState.selectedElementIds);
     if (selectedIds.length === 0) return;
 
@@ -204,27 +234,53 @@
 
     const selectedElements = $elements.filter(el => selectedIds.includes(el.id));
 
-    // Only show transform handles if a single non-arrow, non-line element is selected
     if (selectedElements.length === 1 && selectedElements[0].type !== 'arrow' && selectedElements[0].type !== 'line') {
       const element = selectedElements[0] as ExcalidrawElement | TextElement;
       renderTransformHandles(ctx, element, $appState.zoom);
+    } else if (selectedElements.length > 1) {
+      const allNonArrowNonLine = selectedElements.every(el => el.type !== 'arrow' && el.type !== 'line');
+
+      if (allNonArrowNonLine) {
+        const groupBounds = getGroupBoundingBox(selectedElements);
+        if (groupBounds) {
+          renderGroupTransformHandles(ctx, groupBounds, $appState.zoom);
+        }
+      } else {
+        for (const el of selectedElements) {
+          if (el.type === 'arrow') {
+            if (!isDrawing) {
+              renderArrowHandles(ctx, el as ArrowElement, $appState.zoom);
+            }
+          } else if (el.type === 'line') {
+            if (!isDrawing) {
+              renderLineHandles(ctx, el as ExcalidrawElement, $appState.zoom);
+            }
+          } else {
+            ctx.shadowColor = 'rgba(59, 130, 246, 0.3)';
+            ctx.shadowBlur = 8 / $appState.zoom;
+
+            ctx.strokeStyle = '#3b82f6';
+            ctx.lineWidth = 2.5 / $appState.zoom;
+            ctx.setLineDash([8 / $appState.zoom, 4 / $appState.zoom]);
+            ctx.strokeRect(el.x, el.y, el.width, el.height);
+            ctx.setLineDash([]);
+
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+          }
+        }
+      }
     } else {
-      // For arrows, lines, or multiple selections, use the old rendering
       for (const el of selectedElements) {
         if (el.type === 'arrow') {
-          // Pour les flèches, afficher les handles seulement si on n'est pas en train de dessiner
-          // Cela évite le conflit entre création et édition
           if (!isDrawing) {
             renderArrowHandles(ctx, el as ArrowElement, $appState.zoom);
           }
         } else if (el.type === 'line') {
-          // Pour les lignes, afficher les handles de ligne
           if (!isDrawing) {
             renderLineHandles(ctx, el as ExcalidrawElement, $appState.zoom);
           }
         } else {
-          // Pour les autres éléments, afficher le bounding box moderne
-          // Glow effect
           ctx.shadowColor = 'rgba(59, 130, 246, 0.3)';
           ctx.shadowBlur = 8 / $appState.zoom;
 
@@ -234,7 +290,6 @@
           ctx.strokeRect(el.x, el.y, el.width, el.height);
           ctx.setLineDash([]);
 
-          // Reset shadow
           ctx.shadowColor = 'transparent';
           ctx.shadowBlur = 0;
         }
@@ -362,8 +417,27 @@
       const selectedIds = Array.from($appState.selectedElementIds);
       let handleClicked = false;
 
-      // Priority 1: Check transform handles for single non-arrow, non-line selection
-      if (!isDrawing && selectedIds.length === 1) {
+      if (!isDrawing && selectedIds.length > 1) {
+        const selectedElements = $elements.filter(el => selectedIds.includes(el.id));
+        const allNonArrowNonLine = selectedElements.every(el => el.type !== 'arrow' && el.type !== 'line');
+
+        if (allNonArrowNonLine) {
+          const groupBounds = getGroupBoundingBox(selectedElements);
+          if (groupBounds) {
+            const groupHandle = getGroupHandleAtPosition(groupBounds, worldPos, $appState.zoom);
+            if (groupHandle) {
+              isDraggingGroupHandle = true;
+              draggedGroupHandle = groupHandle;
+              groupTransformStart = worldPos;
+              originalGroupElements = structuredClone(selectedElements);
+              originalGroupBounds = groupBounds;
+              handleClicked = true;
+            }
+          }
+        }
+      }
+
+      if (!handleClicked && !isDrawing && selectedIds.length === 1) {
         const element = $elements.find(el => el.id === selectedIds[0]);
         if (element && element.type !== 'arrow' && element.type !== 'line') {
           const transformHandle = getTransformHandleAtPosition(
@@ -416,26 +490,55 @@
       }
 
       if (!handleClicked) {
-        // Vérifier si on clique sur un élément existant
         const hitElement = getElementAtPosition($elements, worldPos);
+
         if (hitElement) {
-          isDragging = true;
-          draggedElement = hitElement;
-          dragOffset = {
-            x: worldPos.x - hitElement.x,
-            y: worldPos.y - hitElement.y,
-          };
-          appState.update(s => ({
-            ...s,
-            selectedElementIds: new Set([hitElement.id]),
-          }));
+          if (e.shiftKey) {
+            const newSelection = new Set(selectedIds);
+            if (newSelection.has(hitElement.id)) {
+              newSelection.delete(hitElement.id);
+            } else {
+              newSelection.add(hitElement.id);
+            }
+            appState.update(s => ({
+              ...s,
+              selectedElementIds: newSelection,
+            }));
+          } else {
+            if (selectedIds.includes(hitElement.id) && selectedIds.length > 1) {
+              isDraggingGroup = true;
+              const selectedElements = $elements.filter(el => selectedIds.includes(el.id));
+              originalGroupElements = structuredClone(selectedElements);
+              clickedGroupElement = structuredClone(hitElement);
+              dragOffset = {
+                x: worldPos.x - hitElement.x,
+                y: worldPos.y - hitElement.y,
+              };
+            } else {
+              isDragging = true;
+              draggedElement = hitElement;
+              dragOffset = {
+                x: worldPos.x - hitElement.x,
+                y: worldPos.y - hitElement.y,
+              };
+              appState.update(s => ({
+                ...s,
+                selectedElementIds: new Set([hitElement.id]),
+              }));
+            }
+          }
         } else {
-          // Clear selection and close properties panel
-          appState.update(s => ({
-            ...s,
-            selectedElementIds: new Set(),
-            isPropertiesPanelOpen: false,
-          }));
+          if (e.shiftKey) {
+          } else {
+            isDrawingSelectionBox = true;
+            selectionBoxStart = worldPos;
+            selectionBoxCurrent = worldPos;
+            appState.update(s => ({
+              ...s,
+              selectedElementIds: new Set(),
+              isPropertiesPanelOpen: false,
+            }));
+          }
         }
       }
     } else if (['rectangle', 'ellipse', 'line'].includes($appState.activeTool)) {
@@ -617,7 +720,90 @@
       }
     }
 
-    if (isPanning) {
+    if (isDrawingSelectionBox && selectionBoxStart) {
+      selectionBoxCurrent = worldPos;
+    } else if (isDraggingGroup && originalGroupElements.length > 0 && clickedGroupElement) {
+      const dx = worldPos.x - dragOffset.x - clickedGroupElement.x;
+      const dy = worldPos.y - dragOffset.y - clickedGroupElement.y;
+
+      const updates = translateGroup(originalGroupElements, dx, dy);
+      for (const update of updates) {
+        updateElement(update.id!, update as any);
+      }
+
+      let updatedEls = $elements;
+      for (const orig of originalGroupElements) {
+        updatedEls = updateBoundElements(updatedEls, orig.id);
+        updatedEls = updateBoundTextElements(updatedEls, orig.id, ctx!);
+      }
+      elements.set(updatedEls);
+    } else if (isDraggingGroupHandle && draggedGroupHandle && groupTransformStart && originalGroupBounds) {
+      if (draggedGroupHandle.type === 'rotate') {
+        const angleDelta = calculateRotation(
+          {
+            x: originalGroupBounds.x,
+            y: originalGroupBounds.y,
+            width: originalGroupBounds.width,
+            height: originalGroupBounds.height,
+            angle: 0,
+          } as any,
+          worldPos
+        );
+
+        const snappedAngle = e.shiftKey ? snapRotation(angleDelta, true) : angleDelta;
+        const updates = rotateGroup(originalGroupElements, originalGroupBounds, snappedAngle);
+
+        for (const update of updates) {
+          updateElement(update.id!, update as any);
+        }
+
+        let updatedEls = $elements;
+        for (const orig of originalGroupElements) {
+          updatedEls = updateBoundElements(updatedEls, orig.id);
+          updatedEls = updateBoundTextElements(updatedEls, orig.id, ctx!);
+        }
+        elements.set(updatedEls);
+      } else {
+        const dx = worldPos.x - groupTransformStart.x;
+        const dy = worldPos.y - groupTransformStart.y;
+
+        let scaleX = 1;
+        let scaleY = 1;
+        let origin = { x: originalGroupBounds.centerX, y: originalGroupBounds.centerY };
+
+        const handleType = draggedGroupHandle.type;
+        if (handleType === 'se') {
+          origin = { x: originalGroupBounds.x, y: originalGroupBounds.y };
+          scaleX = 1 + dx / originalGroupBounds.width;
+          scaleY = 1 + dy / originalGroupBounds.height;
+        } else if (handleType === 'nw') {
+          origin = { x: originalGroupBounds.x + originalGroupBounds.width, y: originalGroupBounds.y + originalGroupBounds.height };
+          scaleX = 1 - dx / originalGroupBounds.width;
+          scaleY = 1 - dy / originalGroupBounds.height;
+        } else if (handleType === 'ne') {
+          origin = { x: originalGroupBounds.x, y: originalGroupBounds.y + originalGroupBounds.height };
+          scaleX = 1 + dx / originalGroupBounds.width;
+          scaleY = 1 - dy / originalGroupBounds.height;
+        } else if (handleType === 'sw') {
+          origin = { x: originalGroupBounds.x + originalGroupBounds.width, y: originalGroupBounds.y };
+          scaleX = 1 - dx / originalGroupBounds.width;
+          scaleY = 1 + dy / originalGroupBounds.height;
+        }
+
+        const updates = scaleGroup(originalGroupElements, originalGroupBounds, scaleX, scaleY, origin, true);
+
+        for (const update of updates) {
+          updateElement(update.id!, update as any);
+        }
+
+        let updatedEls = $elements;
+        for (const orig of originalGroupElements) {
+          updatedEls = updateBoundElements(updatedEls, orig.id);
+          updatedEls = updateBoundTextElements(updatedEls, orig.id, ctx!);
+        }
+        elements.set(updatedEls);
+      }
+    } else if (isPanning) {
       const dx = e.clientX - lastMousePos.x;
       const dy = e.clientY - lastMousePos.y;
       pan(dx, dy);
@@ -870,7 +1056,21 @@
   }
 
   function handleMouseUp() {
-    // Si on finit de créer une flèche, recalculer son bounding box
+    if (isDrawingSelectionBox && selectionBoxStart && selectionBoxCurrent) {
+      const box = normalizeSelectionBox(selectionBoxStart, selectionBoxCurrent);
+      const selectedElements = getElementsInSelectionBox($elements, box, 'center');
+
+      appState.update(s => ({
+        ...s,
+        selectedElementIds: new Set(selectedElements.map(el => el.id)),
+      }));
+
+      isDrawingSelectionBox = false;
+      selectionBoxStart = null;
+      selectionBoxCurrent = null;
+      return;
+    }
+
     if (isDrawing && currentElementId && $appState.activeTool === 'arrow') {
       const arrow = $elements.find(el => el.id === currentElementId);
       if (arrow && arrow.type === 'arrow') {
@@ -879,7 +1079,6 @@
       }
     }
 
-    // Si on a déplacé un texte lié, mettre à jour son offset
     if (isDragging && draggedElement && draggedElement.type === 'text') {
       const textEl = draggedElement as TextElement;
       if (textEl.binding) {
@@ -891,7 +1090,6 @@
       }
     }
 
-    // Si on a déplacé une flèche avec des bindings, mettre à jour ses offsets
     if (isDragging && draggedElement && draggedElement.type === 'arrow') {
       const arrowEl = draggedElement as ArrowElement;
       if (arrowEl.startBinding || arrowEl.endBinding) {
@@ -900,7 +1098,7 @@
       }
     }
 
-    if (isDrawing || isDraggingHandle || isDragging || isDraggingTransformHandle) {
+    if (isDrawing || isDraggingHandle || isDragging || isDraggingTransformHandle || isDraggingGroup || isDraggingGroupHandle) {
       history.record($elements);
     }
 
@@ -909,6 +1107,9 @@
     isDragging = false;
     isDraggingHandle = false;
     isDraggingTransformHandle = false;
+    isDrawingSelectionBox = false;
+    isDraggingGroup = false;
+    isDraggingGroupHandle = false;
     drawStart = null;
     currentElementId = null;
     draggedElement = null;
@@ -919,6 +1120,13 @@
     draggedTransformHandle = null;
     transformStartPoint = null;
     transformOriginalElement = null;
+    selectionBoxStart = null;
+    selectionBoxCurrent = null;
+    draggedGroupHandle = null;
+    groupTransformStart = null;
+    originalGroupElements = [];
+    originalGroupBounds = null;
+    clickedGroupElement = null;
   }
 
   function startTextEditing(textElement: TextElement) {
