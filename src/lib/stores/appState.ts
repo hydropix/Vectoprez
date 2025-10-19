@@ -12,7 +12,7 @@ const initialState: AppState = {
   zoom: 1.0,
   activeTool: 'selection',
   currentStrokeColorIndex: COLOR_INDICES.DEFAULT,
-  currentBackgroundColorIndex: COLOR_INDICES.TRANSPARENT,
+  currentBackgroundColorIndex: COLOR_INDICES.CREAM,
   currentFillStyle: 'hachure',
   currentStrokeWidth: 2,
   currentStrokeStyle: 'solid',
@@ -30,6 +30,8 @@ const initialState: AppState = {
   isLibraryOpen: false,
   isPropertiesPanelOpen: false,
   theme: initialTheme,
+  clipboard: [],
+  mousePosition: null,
 };
 
 export const appState = writable<AppState>(initialState);

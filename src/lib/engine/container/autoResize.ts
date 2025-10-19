@@ -62,41 +62,37 @@ export function expandContainer(
     return { id: container.id };
   }
 
+  const newX = Math.min(container.x, requiredBounds.x);
+  const newY = Math.min(container.y, requiredBounds.y);
+  const newWidth = Math.max(
+    container.width,
+    requiredBounds.x + requiredBounds.width - newX
+  );
+  const newHeight = Math.max(
+    container.height,
+    requiredBounds.y + requiredBounds.height - newY
+  );
+
+  const baseUpdate = {
+    id: container.id,
+    x: newX,
+    y: newY,
+    width: newWidth,
+    height: newHeight,
+    isExpanded: true
+  };
+
   if (!container.originalBounds) {
     return {
-      id: container.id,
-      x: Math.min(container.x, requiredBounds.x),
-      y: Math.min(container.y, requiredBounds.y),
-      width: Math.max(
-        container.width,
-        requiredBounds.x + requiredBounds.width - Math.min(container.x, requiredBounds.x)
-      ),
-      height: Math.max(
-        container.height,
-        requiredBounds.y + requiredBounds.height - Math.min(container.y, requiredBounds.y)
-      ),
+      ...baseUpdate,
       originalBounds: {
         width: container.width,
         height: container.height
-      },
-      isExpanded: true
+      }
     };
   }
 
-  return {
-    id: container.id,
-    x: Math.min(container.x, requiredBounds.x),
-    y: Math.min(container.y, requiredBounds.y),
-    width: Math.max(
-      container.width,
-      requiredBounds.x + requiredBounds.width - Math.min(container.x, requiredBounds.x)
-    ),
-    height: Math.max(
-      container.height,
-      requiredBounds.y + requiredBounds.height - Math.min(container.y, requiredBounds.y)
-    ),
-    isExpanded: true
-  };
+  return baseUpdate;
 }
 
 export function shrinkContainer(

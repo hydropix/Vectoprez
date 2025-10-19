@@ -1,4 +1,4 @@
-import type { AnyExcalidrawElement, ExcalidrawElement, Point } from '../elements/types';
+import type { AnyExcalidrawElement, ExcalidrawElement } from '../elements/types';
 import { isValidContainerType, findPotentialContainer, shouldDetachFromContainer } from './detection';
 import { ensureChildrenAfterParent } from '../rendering/layering';
 
@@ -27,27 +27,6 @@ export function getAllDescendants(
   return descendants;
 }
 
-export function getAncestors(
-  elementId: string,
-  elements: AnyExcalidrawElement[]
-): string[] {
-  const ancestors: string[] = [];
-  let currentId: string | null = elementId;
-
-  while (currentId) {
-    const element = elements.find(el => el.id === currentId);
-    if (!element) break;
-
-    if (element.parentId) {
-      ancestors.push(element.parentId);
-      currentId = element.parentId;
-    } else {
-      break;
-    }
-  }
-
-  return ancestors;
-}
 
 export function attachToContainer(
   childId: string,
@@ -118,7 +97,6 @@ export function detachFromContainer(
 
 export function updateHierarchy(
   draggingElementId: string,
-  _worldPos: Point,
   elements: AnyExcalidrawElement[]
 ): {
   elements: AnyExcalidrawElement[];
@@ -130,9 +108,7 @@ export function updateHierarchy(
     return { elements, potentialContainer: null, shouldDetach: false };
   }
 
-  const descendants = getAllDescendants(draggingElementId, elements);
-  const excludeIds = [draggingElementId, ...descendants];
-
+  const excludeIds = [draggingElementId, ...getAllDescendants(draggingElementId, elements)];
   const potentialContainer = findPotentialContainer(draggingElement, elements, excludeIds);
 
   let shouldDetach = false;
@@ -142,20 +118,12 @@ export function updateHierarchy(
       shouldDetach = shouldDetachFromContainer(draggingElement, currentParent);
 
       if (shouldDetach && potentialContainer?.id === draggingElement.parentId) {
-        return {
-          elements,
-          potentialContainer: null,
-          shouldDetach: true
-        };
+        return { elements, potentialContainer: null, shouldDetach: true };
       }
     }
   }
 
-  return {
-    elements,
-    potentialContainer,
-    shouldDetach
-  };
+  return { elements, potentialContainer, shouldDetach };
 }
 
 export function finalizeHierarchyChange(

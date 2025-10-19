@@ -12,7 +12,7 @@
   import { get } from 'svelte/store';
 
   onMount(() => {
-    setupKeyboardShortcuts();
+    const cleanupKeyboard = setupKeyboardShortcuts();
     setupAutoSave();
 
     // Apply initial theme
@@ -28,6 +28,10 @@
       applyTheme(get(appState).theme);
       console.log('[App] Loaded auto-saved drawing');
     }
+
+    return () => {
+      cleanupKeyboard();
+    };
   });
 </script>
 

@@ -9,30 +9,28 @@ export function calculateOverlapPercentage(
   child: AnyExcalidrawElement,
   parent: AnyExcalidrawElement
 ): number {
-  const childLeft = child.x;
-  const childRight = child.x + child.width;
-  const childTop = child.y;
-  const childBottom = child.y + child.height;
+  let childWidth = child.width;
+  let childHeight = child.height;
 
-  const parentLeft = parent.x;
-  const parentRight = parent.x + parent.width;
-  const parentTop = parent.y;
-  const parentBottom = parent.y + parent.height;
+  if (isValidContainerType(child)) {
+    const containerChild = child as ExcalidrawElement;
+    if (containerChild.originalBounds) {
+      childWidth = containerChild.originalBounds.width;
+      childHeight = containerChild.originalBounds.height;
+    }
+  }
 
-  const overlapLeft = Math.max(childLeft, parentLeft);
-  const overlapRight = Math.min(childRight, parentRight);
-  const overlapTop = Math.max(childTop, parentTop);
-  const overlapBottom = Math.min(childBottom, parentBottom);
+  const overlapLeft = Math.max(child.x, parent.x);
+  const overlapRight = Math.min(child.x + childWidth, parent.x + parent.width);
+  const overlapTop = Math.max(child.y, parent.y);
+  const overlapBottom = Math.min(child.y + childHeight, parent.y + parent.height);
 
   if (overlapLeft >= overlapRight || overlapTop >= overlapBottom) {
     return 0;
   }
 
-  const overlapWidth = overlapRight - overlapLeft;
-  const overlapHeight = overlapBottom - overlapTop;
-  const overlapArea = overlapWidth * overlapHeight;
-
-  const childArea = child.width * child.height;
+  const overlapArea = (overlapRight - overlapLeft) * (overlapBottom - overlapTop);
+  const childArea = childWidth * childHeight;
 
   return childArea > 0 ? overlapArea / childArea : 0;
 }
@@ -42,11 +40,7 @@ export function shouldBecomeChild(
   container: AnyExcalidrawElement,
   threshold: number = OVERLAP_THRESHOLD
 ): boolean {
-  if (!isValidContainerType(element) || !isValidContainerType(container)) {
-    return false;
-  }
-
-  if (element.id === container.id) {
+  if (!isValidContainerType(element) || !isValidContainerType(container) || element.id === container.id) {
     return false;
   }
 
@@ -54,8 +48,7 @@ export function shouldBecomeChild(
     return true;
   }
 
-  const overlapPercentage = calculateOverlapPercentage(element, container);
-  return overlapPercentage >= threshold;
+  return calculateOverlapPercentage(element, container) >= threshold;
 }
 
 export function findPotentialContainer(

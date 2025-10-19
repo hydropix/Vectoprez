@@ -1,10 +1,16 @@
 import { get } from 'svelte/store';
 import { appState, setTool, setZoom } from '../stores/appState';
-import { elements, deleteElements } from '../stores/elements';
+import { elements, deleteElements, addElement } from '../stores/elements';
 import { history } from '../engine/history/undoRedo';
+import { duplicateElements, calculateCenterPoint, collectElementsWithChildren } from './clipboard';
+import { screenToWorld } from '../engine/canvas/coordinates';
 
 export function setupKeyboardShortcuts() {
   window.addEventListener('keydown', handleKeyDown);
+
+  return () => {
+    window.removeEventListener('keydown', handleKeyDown);
+  };
 }
 
 function handleKeyDown(e: KeyboardEvent) {
@@ -12,6 +18,10 @@ function handleKeyDown(e: KeyboardEvent) {
   const isEditingText = target.tagName === 'TEXTAREA' || target.tagName === 'INPUT';
 
   if (isEditingText) {
+    return;
+  }
+
+  if (e.repeat) {
     return;
   }
 
@@ -24,6 +34,66 @@ function handleKeyDown(e: KeyboardEvent) {
       ...s,
       selectedElementIds: new Set(allElements.map(el => el.id)),
     }));
+  }
+
+  else if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+    e.preventDefault();
+    const selectedIds = Array.from(state.selectedElementIds);
+    if (selectedIds.length > 0) {
+      const allElements = get(elements);
+      const elementsWithChildren = collectElementsWithChildren(selectedIds, allElements);
+      appState.update(s => ({
+        ...s,
+        clipboard: elementsWithChildren,
+      }));
+    }
+  }
+
+  else if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+    e.preventDefault();
+    if (state.clipboard.length > 0) {
+      const clipboardElements = state.clipboard;
+      const centerPoint = calculateCenterPoint(clipboardElements);
+
+      let targetPosition = { x: 0, y: 0 };
+
+      if (state.mousePosition) {
+        targetPosition = screenToWorld(state.mousePosition, {
+          scrollX: state.scrollX,
+          scrollY: state.scrollY,
+          zoom: state.zoom,
+        });
+      } else {
+        const viewportCenterX = window.innerWidth / 2;
+        const viewportCenterY = window.innerHeight / 2;
+        targetPosition = screenToWorld(
+          { x: viewportCenterX, y: viewportCenterY },
+          {
+            scrollX: state.scrollX,
+            scrollY: state.scrollY,
+            zoom: state.zoom,
+          }
+        );
+      }
+
+      const offset = {
+        x: targetPosition.x - centerPoint.x,
+        y: targetPosition.y - centerPoint.y,
+      };
+
+      const duplicated = duplicateElements(clipboardElements, offset);
+
+      history.record(get(elements));
+
+      for (const element of duplicated) {
+        addElement(element);
+      }
+
+      appState.update(s => ({
+        ...s,
+        selectedElementIds: new Set(duplicated.map(el => el.id)),
+      }));
+    }
   }
 
   else if (e.key === 'v' || e.key === '1') {

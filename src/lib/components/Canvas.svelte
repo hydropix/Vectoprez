@@ -41,12 +41,13 @@
   import { updateHierarchy, finalizeHierarchyChange } from '../engine/container/hierarchy';
   import { moveWithChildren } from '../engine/container/transform';
   import { updateContainerBounds, calculateRequiredBounds } from '../engine/container/autoResize';
-  import { renderContainerPreview, renderHierarchyIndicator, createAnimationState, getAnimationProgress, isAnimationComplete, type AnimationState } from '../engine/container/feedback';
+  import { renderContainerPreview, renderHierarchyIndicator, renderDropTargetHighlight, renderDetachIndicator, createAnimationState, getAnimationProgress, isAnimationComplete, type AnimationState } from '../engine/container/feedback';
   import type { Bounds } from '../engine/container/autoResize';
   import { isValidContainerType } from '../engine/container/detection';
   import { updateTextDimensions, shouldDeleteEmptyText } from '../engine/text/editing';
   import { calculateTextScale } from '../engine/text/transform';
   import { MIN_ELEMENT_SIZE_SCREEN } from '../constants';
+  import { collectElementIdsWithChildren } from '$lib/utils/clipboard';
 
   let canvasEl: HTMLCanvasElement;
   let ctx: CanvasRenderingContext2D | null = null;
@@ -182,7 +183,28 @@
 
     for (const element of $elements) {
       if (isValidContainerType(element)) {
-        renderHierarchyIndicator(ctx, element as ExcalidrawElement, $appState.theme, $appState.zoom);
+        renderHierarchyIndicator(ctx, element as ExcalidrawElement, $appState.zoom);
+      }
+    }
+
+    if ((isDragging || isDraggingGroup) && potentialContainer && !shouldDetach) {
+      renderDropTargetHighlight(ctx, potentialContainer, $appState.zoom);
+    }
+
+    if (isDragging && shouldDetach && draggedElement?.parentId) {
+      const parentElement = $elements.find(el => el.id === draggedElement!.parentId);
+      if (parentElement && isValidContainerType(parentElement)) {
+        renderDetachIndicator(ctx, parentElement as ExcalidrawElement, $appState.zoom);
+      }
+    }
+
+    if (isDraggingGroup && shouldDetach && clickedGroupElement) {
+      const draggedGroupElement = originalGroupElements.find(el => el.id === clickedGroupElement!.id);
+      if (draggedGroupElement?.parentId) {
+        const parentElement = $elements.find(el => el.id === draggedGroupElement.parentId);
+        if (parentElement && isValidContainerType(parentElement)) {
+          renderDetachIndicator(ctx, parentElement as ExcalidrawElement, $appState.zoom);
+        }
       }
     }
 
@@ -510,10 +532,16 @@
         if (hitElement) {
           if (e.shiftKey) {
             const newSelection = new Set(selectedIds);
+            const idsWithChildren = collectElementIdsWithChildren([hitElement.id], $elements);
+
             if (newSelection.has(hitElement.id)) {
-              newSelection.delete(hitElement.id);
+              for (const id of idsWithChildren) {
+                newSelection.delete(id);
+              }
             } else {
-              newSelection.add(hitElement.id);
+              for (const id of idsWithChildren) {
+                newSelection.add(id);
+              }
             }
             appState.update(s => ({
               ...s,
@@ -537,9 +565,10 @@
                 x: worldPos.x - hitElement.x,
                 y: worldPos.y - hitElement.y,
               };
+              const idsWithChildren = collectElementIdsWithChildren([hitElement.id], $elements);
               appState.update(s => ({
                 ...s,
-                selectedElementIds: new Set([hitElement.id]),
+                selectedElementIds: new Set(idsWithChildren),
               }));
             }
           }
@@ -637,6 +666,11 @@
       { scrollX: $appState.scrollX, scrollY: $appState.scrollY, zoom: $appState.zoom }
     );
 
+    appState.update(s => ({
+      ...s,
+      mousePosition: { x: e.clientX, y: e.clientY },
+    }));
+
     // Mettre à jour l'état de survol pour le curseur
     if (!isPanning && !isDragging && !isDraggingHandle && !isDraggingTransformHandle && !isDrawing) {
       isOverHandle = false;
@@ -699,6 +733,24 @@
       const updates = translateGroup(originalGroupElements, dx, dy);
       for (const update of updates) {
         updateElement(update.id!, update as any);
+      }
+
+      const rootElements = originalGroupElements.filter(el => !el.parentId || !originalGroupElements.some(other => other.id === el.parentId));
+      if (rootElements.length === 1 && clickedGroupElement) {
+        const movedClickedElement = $elements.find(el => el.id === clickedGroupElement!.id);
+        if (movedClickedElement) {
+          const hierarchyUpdate = updateHierarchy(movedClickedElement.id, $elements);
+          potentialContainer = hierarchyUpdate.potentialContainer;
+          shouldDetach = hierarchyUpdate.shouldDetach;
+
+          if (potentialContainer) {
+            const tempElement = movedClickedElement;
+            const children = [tempElement];
+            previewBounds = calculateRequiredBounds(potentialContainer, children);
+          } else {
+            previewBounds = null;
+          }
+        }
       }
     } else if (isDraggingGroupHandle && draggedGroupHandle && groupTransformStart && originalGroupBounds) {
       if (draggedGroupHandle.type === 'rotate') {
@@ -867,7 +919,7 @@
 
       elements.set(updatedElements);
 
-      const hierarchyUpdate = updateHierarchy(draggedElement!.id, worldPos, updatedElements);
+      const hierarchyUpdate = updateHierarchy(draggedElement!.id, updatedElements);
       potentialContainer = hierarchyUpdate.potentialContainer;
       shouldDetach = hierarchyUpdate.shouldDetach;
 
@@ -1090,6 +1142,72 @@
       }
 
       elements.set(updatedElements);
+
+      potentialContainer = null;
+      shouldDetach = false;
+      previewBounds = null;
+    }
+
+    if (isDraggingGroup && clickedGroupElement && originalGroupElements.length > 0) {
+      const rootElements = originalGroupElements.filter(el => !el.parentId || !originalGroupElements.some(other => other.id === el.parentId));
+
+      if (rootElements.length === 1 && (potentialContainer || shouldDetach)) {
+        const draggedElementId = clickedGroupElement.id;
+        let updatedElements = finalizeHierarchyChange(
+          draggedElementId,
+          potentialContainer,
+          shouldDetach,
+          $elements
+        );
+
+        if (potentialContainer) {
+          updatedElements = updateContainerBounds(potentialContainer!.id, updatedElements);
+
+          const container = updatedElements.find(el => el.id === potentialContainer!.id);
+          if (container && isValidContainerType(container)) {
+            const startBounds: Bounds = {
+              x: potentialContainer.x,
+              y: potentialContainer.y,
+              width: potentialContainer.width,
+              height: potentialContainer.height
+            };
+            const endBounds: Bounds = {
+              x: (container as ExcalidrawElement).x,
+              y: (container as ExcalidrawElement).y,
+              width: (container as ExcalidrawElement).width,
+              height: (container as ExcalidrawElement).height
+            };
+            containerAnimations.set(potentialContainer.id, createAnimationState(startBounds, endBounds));
+          }
+        }
+
+        if (shouldDetach) {
+          const originalDraggedElement = originalGroupElements.find(el => el.id === draggedElementId);
+          if (originalDraggedElement?.parentId) {
+            const oldParentId = originalDraggedElement.parentId;
+            updatedElements = updateContainerBounds(oldParentId, updatedElements);
+
+            const oldParent = updatedElements.find(el => el.id === oldParentId);
+            if (oldParent && isValidContainerType(oldParent)) {
+              const startBounds: Bounds = {
+                x: oldParent.x,
+                y: oldParent.y,
+                width: oldParent.width,
+                height: oldParent.height
+              };
+              const endBounds: Bounds = {
+                x: oldParent.x,
+                y: oldParent.y,
+                width: (oldParent as ExcalidrawElement).originalBounds?.width ?? oldParent.width,
+                height: (oldParent as ExcalidrawElement).originalBounds?.height ?? oldParent.height
+              };
+              containerAnimations.set(oldParentId, createAnimationState(startBounds, endBounds));
+            }
+          }
+        }
+
+        elements.set(updatedElements);
+      }
 
       potentialContainer = null;
       shouldDetach = false;

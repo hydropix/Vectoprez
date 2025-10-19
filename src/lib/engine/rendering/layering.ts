@@ -127,3 +127,41 @@ export function sendBackward(
 
   return result;
 }
+
+export function validateAndFixHierarchyOrder(
+  elements: AnyExcalidrawElement[]
+): AnyExcalidrawElement[] {
+  const containers = elements.filter(el =>
+    isValidContainerType(el) && (el as ExcalidrawElement).childrenIds.length > 0
+  );
+
+  if (containers.length === 0) {
+    return elements;
+  }
+
+  let result = elements;
+
+  for (const container of containers) {
+    const containerElement = container as ExcalidrawElement;
+    const containerIndex = result.findIndex(el => el.id === containerElement.id);
+
+    if (containerIndex === -1) continue;
+
+    const allDescendantIds = getAllDescendants(containerElement.id, result);
+    let needsReorder = false;
+
+    for (const descendantId of allDescendantIds) {
+      const descendantIndex = result.findIndex(el => el.id === descendantId);
+      if (descendantIndex !== -1 && descendantIndex < containerIndex) {
+        needsReorder = true;
+        break;
+      }
+    }
+
+    if (needsReorder) {
+      result = ensureChildrenAfterParent(containerElement.id, result);
+    }
+  }
+
+  return result;
+}

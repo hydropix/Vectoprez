@@ -103,4 +103,8 @@ export interface AppState {
   isLibraryOpen: boolean;
   isPropertiesPanelOpen: boolean;
   theme: Theme;
+
+  // Clipboard
+  clipboard: AnyExcalidrawElement[];
+  mousePosition: Point | null;
 }
