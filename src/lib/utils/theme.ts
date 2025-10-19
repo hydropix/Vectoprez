@@ -22,26 +22,26 @@ export interface ColorScheme {
 
 export const colorSchemes: Record<Theme, ColorScheme> = {
   light: {
-    background: '#ffffff',
-    surface: '#f8f9fa',
-    border: '#dee2e6',
-    text: '#212529',
-    textSecondary: '#6c757d',
-    canvasBackground: '#ffffff',
-    buttonHover: '#e9ecef',
-    buttonActive: '#dee2e6',
+    background: '#F06E65',
+    surface: '#ffffff',
+    border: '#D35869',
+    text: '#495265',
+    textSecondary: '#1F92AF',
+    canvasBackground: '#F06E65',
+    buttonHover: 'rgba(255, 255, 255, 0.2)',
+    buttonActive: 'rgba(255, 255, 255, 0.4)',
     inputBackground: '#ffffff',
-    inputBorder: '#ced4da'
+    inputBorder: '#CA7F58'
   },
   dark: {
     background: '#1a1a1a',
     surface: '#2d2d2d',
     border: '#404040',
-    text: '#e9ecef',
-    textSecondary: '#adb5bd',
+    text: '#f5f5f5',
+    textSecondary: '#9ca3af',
     canvasBackground: '#1a1a1a',
-    buttonHover: '#3d3d3d',
-    buttonActive: '#4d4d4d',
+    buttonHover: 'rgba(255, 255, 255, 0.08)',
+    buttonActive: 'rgba(255, 255, 255, 0.15)',
     inputBackground: '#2d2d2d',
     inputBorder: '#404040'
   }

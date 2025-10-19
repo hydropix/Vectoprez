@@ -39,6 +39,11 @@ export interface BaseElement {
   seed: number; // Pour Rough.js consistency
   parentId: string | null;
   originalBounds: { width: number; height: number } | null;
+  shadowEnabled: boolean;
+  shadowBlur: number;
+  shadowOffsetX: number;
+  shadowOffsetY: number;
+  shadowOpacity: number;
 }
 
 export interface ExcalidrawElement extends BaseElement {
@@ -82,6 +87,11 @@ export interface AppState {
   currentStrokeStyle: StrokeStyle;
   currentRoughness: Roughness;
   currentOpacity: number;
+  currentShadowEnabled: boolean;
+  currentShadowBlur: number;
+  currentShadowOffsetX: number;
+  currentShadowOffsetY: number;
+  currentShadowOpacity: number;
 
   // Sélection
   selectedElementIds: Set<string>;

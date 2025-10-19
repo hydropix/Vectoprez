@@ -18,9 +18,14 @@ const initialState: AppState = {
   currentStrokeStyle: 'solid',
   currentRoughness: 0,
   currentOpacity: 100,
+  currentShadowEnabled: false,
+  currentShadowBlur: 10,
+  currentShadowOffsetX: 0,
+  currentShadowOffsetY: 2,
+  currentShadowOpacity: 30,
   selectedElementIds: new Set(),
   hoveredElementId: null,
-  viewBackgroundColor: initialTheme === 'light' ? '#ff9f93' : '#171923',
+  viewBackgroundColor: initialTheme === 'light' ? '#F06E65' : '#1a1a1a',
   gridSize: null,
   isLibraryOpen: false,
   isPropertiesPanelOpen: false,
@@ -51,7 +56,7 @@ export function setTool(tool: AppState['activeTool']) {
 
 export function setTheme(theme: Theme) {
   appState.update(state => {
-    const bgColor = theme === 'light' ? '#ff9f93' : '#171923';
+    const bgColor = theme === 'light' ? '#F06E65' : '#1a1a1a';
 
     return {
       ...state,

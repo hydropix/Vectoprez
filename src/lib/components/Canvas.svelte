@@ -95,7 +95,7 @@
   let previewBounds: Bounds | null = null;
 
   $: if ($appState.theme) {
-    const bgColor = $appState.theme === 'light' ? '#ff9f93' : '#171923';
+    const bgColor = $appState.theme === 'light' ? '#F06E65' : '#1a1a1a';
     appState.update(s => ({ ...s, viewBackgroundColor: bgColor }));
   }
 

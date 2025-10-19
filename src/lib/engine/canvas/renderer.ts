@@ -6,7 +6,8 @@ function renderSmoothShape(
   element: AnyExcalidrawElement,
   ctx: CanvasRenderingContext2D,
   strokeColor: string,
-  bgColor: string | undefined
+  bgColor: string | undefined,
+  theme: Theme
 ) {
   ctx.save();
 
@@ -16,46 +17,76 @@ function renderSmoothShape(
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 
-  ctx.beginPath();
+  const createPath = () => {
+    ctx.beginPath();
+    switch (element.type) {
+      case 'rectangle': {
+        const radius = Math.min(element.width, element.height) * 0.12;
+        const x = element.x;
+        const y = element.y;
+        const w = element.width;
+        const h = element.height;
+        const r = Math.min(radius, w / 2, h / 2);
 
-  switch (element.type) {
-    case 'rectangle': {
-      const radius = Math.min(element.width, element.height) * 0.12;
-      const x = element.x;
-      const y = element.y;
-      const w = element.width;
-      const h = element.height;
-      const r = Math.min(radius, w / 2, h / 2);
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.arcTo(x + w, y, x + w, y + r, r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+        ctx.lineTo(x + r, y + h);
+        ctx.arcTo(x, y + h, x, y + h - r, r);
+        ctx.lineTo(x, y + r);
+        ctx.arcTo(x, y, x + r, y, r);
+        ctx.closePath();
+        break;
+      }
+      case 'ellipse': {
+        const centerX = element.x + element.width / 2;
+        const centerY = element.y + element.height / 2;
+        const radiusX = element.width / 2;
+        const radiusY = element.height / 2;
 
-      ctx.moveTo(x + r, y);
-      ctx.lineTo(x + w - r, y);
-      ctx.arcTo(x + w, y, x + w, y + r, r);
-      ctx.lineTo(x + w, y + h - r);
-      ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
-      ctx.lineTo(x + r, y + h);
-      ctx.arcTo(x, y + h, x, y + h - r, r);
-      ctx.lineTo(x, y + r);
-      ctx.arcTo(x, y, x + r, y, r);
-      ctx.closePath();
-      break;
+        ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, 2 * Math.PI);
+        break;
+      }
+      case 'line': {
+        ctx.moveTo(element.x, element.y);
+        ctx.lineTo(element.x + element.width, element.y + element.height);
+        break;
+      }
     }
-    case 'ellipse': {
-      const centerX = element.x + element.width / 2;
-      const centerY = element.y + element.height / 2;
-      const radiusX = element.width / 2;
-      const radiusY = element.height / 2;
+  };
 
-      ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, 2 * Math.PI);
-      break;
-    }
-    case 'line': {
-      ctx.moveTo(element.x, element.y);
-      ctx.lineTo(element.x + element.width, element.y + element.height);
-      break;
+  if (element.shadowEnabled && (element.type === 'rectangle' || element.type === 'ellipse')) {
+    const shadowColor = theme === 'dark'
+      ? `rgba(255, 255, 255, ${element.shadowOpacity / 100})`
+      : `rgba(0, 0, 0, ${element.shadowOpacity / 100})`;
+
+    if (bgColor) {
+      ctx.shadowColor = shadowColor;
+      ctx.shadowBlur = element.shadowBlur;
+      ctx.shadowOffsetX = element.shadowOffsetX;
+      ctx.shadowOffsetY = element.shadowOffsetY;
+
+      createPath();
+      ctx.fillStyle = bgColor;
+      ctx.fill();
+
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+    } else {
+      ctx.shadowColor = shadowColor;
+      ctx.shadowBlur = element.shadowBlur;
+      ctx.shadowOffsetX = element.shadowOffsetX;
+      ctx.shadowOffsetY = element.shadowOffsetY;
     }
   }
 
-  if (bgColor) {
+  createPath();
+
+  if (bgColor && !element.shadowEnabled) {
     ctx.fillStyle = bgColor;
     ctx.fill();
   }
@@ -107,7 +138,7 @@ function renderElement(
     case 'rectangle':
     case 'ellipse':
     case 'line':
-      renderSmoothShape(element, ctx, themedStrokeColor, actualBgColor);
+      renderSmoothShape(element, ctx, themedStrokeColor, actualBgColor, theme);
       break;
     case 'arrow':
       renderArrow(element as ArrowElement, ctx, theme);

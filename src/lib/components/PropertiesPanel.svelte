@@ -143,6 +143,74 @@
 			</div>
 		</div>
 
+	{#if selectedElements[0].type === 'rectangle' || selectedElements[0].type === 'ellipse'}
+		<div class="panel-header">
+			<h4>Shadow</h4>
+		</div>
+		<div class="section">
+			<label class="checkbox-control">
+				<input
+					type="checkbox"
+					checked={selectedElements[0].shadowEnabled}
+					on:change={(e) => updateProperty('shadowEnabled', e.currentTarget.checked)}
+				/>
+				<span>Enable Shadow</span>
+			</label>
+
+			{#if selectedElements[0].shadowEnabled}
+				<div class="shadow-controls">
+					<div class="control-group">
+						<label>Blur</label>
+						<input
+							type="range"
+							min="0"
+							max="50"
+							value={selectedElements[0].shadowBlur}
+							on:input={(e) => updateProperty('shadowBlur', Number(e.currentTarget.value))}
+						/>
+						<span class="value">{selectedElements[0].shadowBlur}px</span>
+					</div>
+
+					<div class="control-group">
+						<label>Offset X</label>
+						<input
+							type="range"
+							min="-50"
+							max="50"
+							value={selectedElements[0].shadowOffsetX}
+							on:input={(e) => updateProperty('shadowOffsetX', Number(e.currentTarget.value))}
+						/>
+						<span class="value">{selectedElements[0].shadowOffsetX}px</span>
+					</div>
+
+					<div class="control-group">
+						<label>Offset Y</label>
+						<input
+							type="range"
+							min="-50"
+							max="50"
+							value={selectedElements[0].shadowOffsetY}
+							on:input={(e) => updateProperty('shadowOffsetY', Number(e.currentTarget.value))}
+						/>
+						<span class="value">{selectedElements[0].shadowOffsetY}px</span>
+					</div>
+
+					<div class="control-group">
+						<label>Opacity</label>
+						<input
+							type="range"
+							min="0"
+							max="100"
+							value={selectedElements[0].shadowOpacity}
+							on:input={(e) => updateProperty('shadowOpacity', Number(e.currentTarget.value))}
+						/>
+						<span class="value">{selectedElements[0].shadowOpacity}%</span>
+					</div>
+				</div>
+			{/if}
+		</div>
+	{/if}
+
 		<div class="panel-header">
 			<h4>Layers</h4>
 		</div>
@@ -355,4 +423,86 @@
 		background-clip: padding-box;
 		transform: scaleY(1.1);
 	}
+
+
+	.checkbox-control {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-md);
+		cursor: pointer;
+		margin-bottom: var(--spacing-md);
+	}
+
+	.checkbox-control input[type='checkbox'] {
+		cursor: pointer;
+		width: 18px;
+		height: 18px;
+		accent-color: var(--color-accent);
+	}
+
+	.checkbox-control span {
+		font-size: 13px;
+		font-weight: 500;
+		color: var(--color-text);
+	}
+
+	.shadow-controls {
+		margin-top: var(--spacing-lg);
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-lg);
+	}
+
+	.control-group {
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-sm);
+	}
+
+	.control-group label {
+		font-size: 11px;
+		font-weight: 600;
+		color: var(--color-text-secondary);
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+	}
+
+	.control-group input[type='range'] {
+		width: 100%;
+		cursor: pointer;
+		height: 6px;
+		border-radius: var(--radius-full);
+		outline: none;
+		appearance: none;
+		-webkit-appearance: none;
+		background: var(--color-border);
+	}
+
+	.control-group input[type='range']::-webkit-slider-thumb {
+		width: 16px;
+		height: 16px;
+		border-radius: 50%;
+		background: var(--color-accent);
+		cursor: pointer;
+		-webkit-appearance: none;
+		appearance: none;
+		border: 2px solid var(--color-surface);
+		box-shadow: var(--shadow-md);
+		transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+	}
+
+	.control-group input[type='range']::-webkit-slider-thumb:hover {
+		transform: scale(1.15);
+		box-shadow: var(--shadow-lg);
+	}
+
+	.control-group .value {
+		font-size: 12px;
+		font-weight: 600;
+		color: var(--color-accent);
+		align-self: flex-end;
+		min-width: 45px;
+		text-align: right;
+	}
+
 </style>

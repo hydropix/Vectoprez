@@ -1,28 +1,28 @@
 :root {
-	/* Light theme - Inspired by Mini Metro vibrant design */
-	--color-background: #ff8b7d;
+	/* Light theme - Custom coral palette */
+	--color-background: #F06E65;
 	--color-surface: #ffffff;
-	--color-border: rgba(0, 0, 0, 0.12);
-	--color-text: #2d3748;
-	--color-text-secondary: #718096;
-	--color-canvas-background: #ff9f93;
+	--color-border: rgba(211, 88, 105, 0.3);
+	--color-text: #495265;
+	--color-text-secondary: #1F92AF;
+	--color-canvas-background: #F06E65;
 
 	/* Interactive elements */
-	--color-button-hover: rgba(255, 255, 255, 0.25);
-	--color-button-hover-border: rgba(0, 0, 0, 0.18);
-	--color-button-active: rgba(59, 130, 246, 0.15);
+	--color-button-hover: rgba(255, 255, 255, 0.2);
+	--color-button-hover-border: rgba(202, 127, 88, 0.3);
+	--color-button-active: rgba(255, 255, 255, 0.4);
 
 	/* Inputs */
 	--color-input-background: rgba(255, 255, 255, 0.95);
-	--color-input-border: rgba(0, 0, 0, 0.15);
+	--color-input-border: rgba(202, 127, 88, 0.4);
 
 	/* Accent colors */
-	--color-accent: #3b82f6;
-	--color-accent-hover: #2563eb;
+	--color-accent: #1F92AF;
+	--color-accent-hover: #63D8E2;
 
 	/* Danger */
-	--color-danger: #e53e3e;
-	--color-danger-bg: rgba(229, 62, 62, 0.1);
+	--color-danger: #D35869;
+	--color-danger-bg: rgba(211, 88, 105, 0.1);
 
 	/* Shadows - More pronounced for depth */
 	--shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.08);
@@ -46,30 +46,30 @@
 }
 
 [data-theme='dark'] {
-	/* Dark theme - Deep rich colors inspired by Mini Metro night mode */
-	--color-background: #1a202c;
-	--color-surface: #2d3748;
+	/* Dark theme - Near-black palette */
+	--color-background: #1a1a1a;
+	--color-surface: #2d2d2d;
 	--color-border: rgba(255, 255, 255, 0.12);
-	--color-text: #f7fafc;
-	--color-text-secondary: #a0aec0;
-	--color-canvas-background: #171923;
+	--color-text: #f5f5f5;
+	--color-text-secondary: #9ca3af;
+	--color-canvas-background: #1a1a1a;
 
 	/* Interactive elements */
 	--color-button-hover: rgba(255, 255, 255, 0.08);
-	--color-button-hover-border: rgba(255, 255, 255, 0.18);
-	--color-button-active: rgba(66, 153, 225, 0.2);
+	--color-button-hover-border: rgba(255, 255, 255, 0.15);
+	--color-button-active: rgba(255, 255, 255, 0.15);
 
 	/* Inputs */
-	--color-input-background: rgba(45, 55, 72, 0.8);
+	--color-input-background: #2d2d2d;
 	--color-input-border: rgba(255, 255, 255, 0.15);
 
 	/* Accent colors */
-	--color-accent: #4299e1;
-	--color-accent-hover: #3182ce;
+	--color-accent: #4FC3F7;
+	--color-accent-hover: #63D8E2;
 
 	/* Danger */
-	--color-danger: #fc8181;
-	--color-danger-bg: rgba(252, 129, 129, 0.1);
+	--color-danger: #FF7597;
+	--color-danger-bg: rgba(255, 117, 151, 0.15);
 
 	/* Shadows */
 	--shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);

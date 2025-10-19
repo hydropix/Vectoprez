@@ -28,6 +28,11 @@ export function createElement(
     seed: Math.floor(Math.random() * 2 ** 31),
     parentId: null,
     originalBounds: null,
+    shadowEnabled: options.shadowEnabled ?? false,
+    shadowBlur: options.shadowBlur ?? 10,
+    shadowOffsetX: options.shadowOffsetX ?? 0,
+    shadowOffsetY: options.shadowOffsetY ?? 2,
+    shadowOpacity: options.shadowOpacity ?? 30,
     ...options,
   };
 
